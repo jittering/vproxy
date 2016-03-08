@@ -4,12 +4,13 @@ simple proxy is a really simple reverse proxy - mostly for development purposes.
 
 installation
 =====================
-   go get github.com/ybrs/simpleproxy.git
+
+    go get github.com/ybrs/simpleproxy.git
 
 or
 
-   git clone
-   go build
+    git clone
+    go build
 
 usage
 =====================
