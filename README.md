@@ -16,3 +16,9 @@ usage
 =====================
 
     simpleproxy -listen 0.0.0.0:9001 -target http://localhost:8000
+
+also simpleproxy can handle static files too
+
+    simpleproxy -listen 0.0.0.0:9001 -target http://localhost:8000 -static /media/:./media/
+
+
