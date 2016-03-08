@@ -70,7 +70,6 @@ func (mux *LoggedMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	finishTime := time.Now()
 	elapsedTime := finishTime.Sub(startTime)
 	log.Println(r.RemoteAddr, " ", r.Method, "[", record.status, "]", r.URL, r.ContentLength, elapsedTime)
-
 }
 
 
