@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -88,18 +87,8 @@ func runCommand() {
 func main() {
 	parseOpts()
 
-	p := &httputil.ReverseProxy{
-		Director: func(r *http.Request) {
-			p, q := r.URL.Path, r.URL.RawQuery
-			*r.URL = *targetURL
-			r.URL.Path, r.URL.RawQuery = p, q
-			r.Host = targetURL.Host
-		},
-		Transport: &simpleproxy.ProxyTransport{},
-	}
-
 	mux := simpleproxy.NewLoggedMux()
-	mux.Handle("/", p)
+	mux.Handle("/", simpleproxy.CreateProxy(*targetURL))
 
 	if *staticFilePath != "" {
 		paths := strings.Split(*staticFilePath, ":")

@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 )
 
 var BadGatewayMessage = `<html>
@@ -33,4 +35,16 @@ func (t *ProxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 	}
 
 	return response, err
+}
+
+func CreateProxy(targetURL url.URL) *httputil.ReverseProxy {
+	return &httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			p, q := r.URL.Path, r.URL.RawQuery
+			*r.URL = targetURL
+			r.URL.Path, r.URL.RawQuery = p, q
+			r.Host = targetURL.Host
+		},
+		Transport: &ProxyTransport{},
+	}
 }
