@@ -32,8 +32,19 @@ func main() {
 		log.Fatal("must specify -bind")
 	}
 
-	servers := make(map[string]*simpleproxy.Vhost)
+	vhost := createVhostMux(bind)
+	listenAddr := fmt.Sprintf("127.0.0.1:%d", 9999)
 
+	mux := simpleproxy.NewLoggedMux()
+	mux.Handle("/", vhost)
+
+	fmt.Printf("[*] starting proxy: http://%s\n\n", listenAddr)
+	log.Fatal(http.ListenAndServe(listenAddr, mux))
+}
+
+// Create vhost config for each binding
+func createVhostMux(bind *string) *simpleproxy.VhostMux {
+	servers := make(map[string]*simpleproxy.Vhost)
 	bindings := strings.Split(*bind, " ")
 	for _, binding := range bindings {
 		s := strings.Split(binding, ":")
@@ -47,16 +58,8 @@ func main() {
 		servers[hostname] = &simpleproxy.Vhost{
 			Host: hostname, Port: targetPort, Handler: proxy,
 		}
-
 	}
 
-	vhost := &simpleproxy.VhostMux{servers}
-	listenAddr := fmt.Sprintf("127.0.0.1:%d", 9999)
-
-	mux := simpleproxy.NewLoggedMux()
-	mux.Handle("/", vhost)
-
-	fmt.Printf("[*] starting proxy: http://%s\n\n", listenAddr)
-	log.Fatal(http.ListenAndServe(listenAddr, mux))
-
+	vhost := &simpleproxy.VhostMux{Servers: servers}
+	return vhost
 }
