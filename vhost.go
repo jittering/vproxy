@@ -11,6 +11,8 @@ type Vhost struct {
 	Host    string
 	Port    int
 	Handler http.Handler
+	Cert    string
+	Key     string
 }
 
 // VhostMux is an http.Handler whose ServeHTTP forwards the request to
