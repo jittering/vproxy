@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
 )
 
 type Vhost struct {
@@ -42,4 +46,48 @@ func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// handle it
 	vhost.Handler.ServeHTTP(w, r)
+}
+
+// CreateVhostMux config from list of bindings
+func CreateVhostMux(bindings []string, useTLS bool) *VhostMux {
+	servers := make(map[string]*Vhost)
+	for _, binding := range bindings {
+		if binding != "" {
+			vhost, hostname := CreateVhost(binding, useTLS)
+			servers[hostname] = vhost
+		}
+	}
+
+	return &VhostMux{Servers: servers}
+}
+
+// CreateVhost for the host:port pair, optionally with a TLS cert
+func CreateVhost(input string, useTLS bool) (*Vhost, string) {
+	s := strings.Split(input, ":")
+	if len(s) < 2 {
+		// invalid binding
+		log.Fatalf("error: invalid binding '%s'\n", input)
+	}
+
+	hostname := s[0]
+	targetPort, err := strconv.Atoi(s[1])
+	if err != nil {
+		log.Fatal("failed to parse target port:", err)
+		os.Exit(1)
+	}
+
+	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)})
+
+	vhost := &Vhost{
+		Host: hostname, Port: targetPort, Handler: proxy,
+	}
+
+	if useTLS {
+		vhost.Cert, vhost.Key, err = MakeCert(hostname)
+		if err != nil {
+			log.Fatalf("failed to generate cert for host %s", hostname)
+		}
+	}
+
+	return vhost, hostname
 }

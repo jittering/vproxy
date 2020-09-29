@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -38,7 +35,7 @@ func main() {
 	// create handlers
 	bindings := strings.Split(*bind, " ")
 	bindings = append(bindings, flag.Args()...)
-	vhost := createVhostMux(bindings)
+	vhost := simpleproxy.CreateVhostMux(bindings, *httpsPort > 0)
 	mux := simpleproxy.NewLoggedMux()
 	mux.Handle("/", vhost)
 
@@ -47,7 +44,7 @@ func main() {
 
 	if *httpPort > 0 {
 		wg.Add(1)
-		listenAddr := fmt.Sprintf("127.0.0.1:%d", 80)
+		listenAddr := fmt.Sprintf("127.0.0.1:%d", *httpPort)
 		fmt.Printf("[*] starting proxy: http://%s\n", listenAddr)
 		go func() {
 			log.Fatal(http.ListenAndServe(listenAddr, mux))
@@ -67,7 +64,7 @@ func main() {
 }
 
 func listenTLS(vhost *simpleproxy.VhostMux, mux *simpleproxy.LoggedMux) {
-	listenAddrTLS := fmt.Sprintf("127.0.0.1:%d", 443)
+	listenAddrTLS := fmt.Sprintf("127.0.0.1:%d", *httpsPort)
 	fmt.Printf("[*] starting proxy: https://%s\n", listenAddrTLS)
 	fmt.Printf("    vhosts:\n")
 
@@ -92,48 +89,4 @@ func createTLSConfig(vhost *simpleproxy.VhostMux) *tls.Config {
 	}
 	cfg.BuildNameToCertificate()
 	return cfg
-}
-
-// Create vhost config for each binding
-func createVhostMux(bindings []string) *simpleproxy.VhostMux {
-	servers := make(map[string]*simpleproxy.Vhost)
-	for _, binding := range bindings {
-		if binding != "" {
-			vhost, hostname := createVhost(binding)
-			servers[hostname] = vhost
-		}
-	}
-
-	return &simpleproxy.VhostMux{Servers: servers}
-}
-
-// Create Vhost for the host:port pair, optionally with a TLS cert
-func createVhost(input string) (*simpleproxy.Vhost, string) {
-	s := strings.Split(input, ":")
-	if len(s) < 2 {
-		// invalid binding
-		log.Fatalf("error: invalid binding '%s'\n", input)
-	}
-
-	hostname := s[0]
-	targetPort, err := strconv.Atoi(s[1])
-	if err != nil {
-		log.Fatal("failed to parse target port:", err)
-		os.Exit(1)
-	}
-
-	proxy := simpleproxy.CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)})
-
-	vhost := &simpleproxy.Vhost{
-		Host: hostname, Port: targetPort, Handler: proxy,
-	}
-
-	if *httpsPort > 0 {
-		vhost.Cert, vhost.Key, err = simpleproxy.MakeCert(hostname)
-		if err != nil {
-			log.Fatalf("failed to generate cert for host %s", hostname)
-		}
-	}
-
-	return vhost, hostname
 }
