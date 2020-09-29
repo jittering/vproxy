@@ -12,12 +12,14 @@ import (
 )
 
 func startClientMode(addr string) {
+	fmt.Println("[*] found existing daemon, starting in client mode")
 	binding := flag.Args()[0]
 
 	uri := fmt.Sprintf("http://%s/_vproxy", addr)
 	data := url.Values{}
 	data.Add("binding", binding)
 
+	fmt.Println("[*] registering vhost:", binding)
 	res, err := http.DefaultClient.PostForm(uri, data)
 	if err != nil {
 		log.Fatalf("error starting client: %s\n", err)

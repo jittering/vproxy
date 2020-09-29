@@ -151,6 +151,7 @@ func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
 		d.mux.RemoveLogListener(vhost.Host)
+		d.restartTLS()
 	}()
 
 	// Listen to connection close and un-register logChan
