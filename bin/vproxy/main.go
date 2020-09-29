@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -39,41 +40,69 @@ func main() {
 	mux := simpleproxy.NewLoggedMux()
 	mux.Handle("/", vhost)
 
-	// start listeners
-	var wg sync.WaitGroup
-
-	if *httpPort > 0 {
-		wg.Add(1)
-		listenAddr := fmt.Sprintf("127.0.0.1:%d", *httpPort)
-		fmt.Printf("[*] starting proxy: http://%s\n", listenAddr)
-		go func() {
-			log.Fatal(http.ListenAndServe(listenAddr, mux))
-			wg.Done()
-		}()
-	}
-
-	if *httpsPort > 0 {
-		wg.Add(1)
-		go func() {
-			listenTLS(vhost, mux)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
+	// start daemon
+	d := &daemon{vhost: vhost, mux: mux, httpPort: *httpPort, httpsPort: *httpsPort}
+	d.run()
 }
 
-func listenTLS(vhost *simpleproxy.VhostMux, mux *simpleproxy.LoggedMux) {
-	listenAddrTLS := fmt.Sprintf("127.0.0.1:%d", *httpsPort)
-	fmt.Printf("[*] starting proxy: https://%s\n", listenAddrTLS)
-	fmt.Printf("    vhosts:\n")
+type daemon struct {
+	wg    sync.WaitGroup
+	vhost *simpleproxy.VhostMux
+	mux   *simpleproxy.LoggedMux
+
+	httpPort     int
+	httpAddr     string
+	httpListener net.Listener
+
+	httpsPort     int
+	httpsAddr     string
+	httpsListener net.Listener
+}
+
+func (d *daemon) run() {
+	d.wg.Add(1) // ensure we don't exit immediately
+	if d.httpPort > 0 {
+		d.httpAddr = fmt.Sprintf("127.0.0.1:%d", d.httpPort)
+		fmt.Printf("[*] starting proxy: http://%s\n", d.httpAddr)
+		go d.startHTTP()
+	}
+	if d.httpsPort > 0 {
+		d.httpsAddr = fmt.Sprintf("127.0.0.1:%d", d.httpsPort)
+		fmt.Printf("[*] starting proxy: https://%s\n", d.httpsAddr)
+		fmt.Printf("    vhosts:\n")
+		go d.startTLS()
+	}
+	d.wg.Wait()
+}
+
+func (d *daemon) startHTTP() {
+	d.wg.Add(1)
+	var err error
+	d.httpListener, err = net.Listen("tcp", d.httpAddr)
+	if err != nil {
+		log.Fatalf("failed to start listener: %s", err)
+	}
+
+	server := &http.Server{Handler: d.mux}
+	server.Serve(d.httpListener)
+	d.wg.Done()
+}
+
+func (d *daemon) startTLS() {
+	d.wg.Add(1)
+	var err error
+	d.httpsListener, err = net.Listen("tcp", d.httpsAddr)
+	if err != nil {
+		log.Fatalf("failed to start listener: %s", err)
+	}
 
 	server := http.Server{
-		Addr:      listenAddrTLS,
-		Handler:   mux,
-		TLSConfig: createTLSConfig(vhost),
+		Handler:   d.mux,
+		TLSConfig: createTLSConfig(d.vhost),
 	}
-	log.Fatal(server.ListenAndServeTLS("", ""))
+
+	server.Serve(d.httpsListener)
+	d.wg.Done()
 }
 
 // Create multi-certificate TLS config from vhost config
