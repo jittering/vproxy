@@ -2,8 +2,8 @@ package simpleproxy
 
 import (
 	"log"
+	"net"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -39,14 +39,18 @@ func (mux *LoggedMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ResponseWriter: w,
 	}
 
-	// ignore port num, if any
-	s := strings.Split(r.Host, ":")
-	host := s[0]
-
+	// serve request and capture timings
 	startTime := time.Now()
 	mux.ServeMux.ServeHTTP(record, r)
 	finishTime := time.Now()
 	elapsedTime := finishTime.Sub(startTime)
+	host := getHostName(r.Host)
 
 	log.Printf("%s [%s] %s [ %d ] %s %d %s", r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
+}
+
+// ignore port num, if any
+func getHostName(input string) string {
+	host, _, _ := net.SplitHostPort(input)
+	return host
 }

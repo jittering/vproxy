@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type Vhost struct {
@@ -22,12 +21,9 @@ type VhostMux struct {
 }
 
 func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	originalUrl := r.Host + r.URL.Path
+	originalURL := r.Host + r.URL.Path
 
-	// ignore port num, if any
-	s := strings.Split(r.Host, ":")
-	host := s[0]
-
+	host := getHostName(r.Host)
 	vhost := v.Servers[host]
 	if vhost == nil {
 		log.Printf("Host Not Found: `%s`", host)
@@ -38,9 +34,9 @@ func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if val := recover(); val != nil {
-			log.Printf("Error proxying request `%s` to `%s`: %v", originalUrl, r.URL, val)
+			log.Printf("Error proxying request `%s` to `%s`: %v", originalURL, r.URL, val)
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintf(w, "Error proxying request `%s` to `%s`: %v", originalUrl, r.URL, val)
+			fmt.Fprintf(w, "Error proxying request `%s` to `%s`: %v", originalURL, r.URL, val)
 		}
 	}()
 
