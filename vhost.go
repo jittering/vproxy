@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -53,7 +52,11 @@ func CreateVhostMux(bindings []string, useTLS bool) *VhostMux {
 	servers := make(map[string]*Vhost)
 	for _, binding := range bindings {
 		if binding != "" {
-			vhost := CreateVhost(binding, useTLS)
+			vhost, err := CreateVhost(binding, useTLS)
+			if err != nil {
+				// on startup, bail immediately
+				log.Fatal(err)
+			}
 			servers[vhost.Host] = vhost
 		}
 	}
@@ -62,18 +65,17 @@ func CreateVhostMux(bindings []string, useTLS bool) *VhostMux {
 }
 
 // CreateVhost for the host:port pair, optionally with a TLS cert
-func CreateVhost(input string, useTLS bool) *Vhost {
+func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	s := strings.Split(input, ":")
 	if len(s) < 2 {
 		// invalid binding
-		log.Fatalf("error: invalid binding '%s'\n", input)
+		return nil, fmt.Errorf("error: invalid binding '%s'", input)
 	}
 
 	hostname := s[0]
 	targetPort, err := strconv.Atoi(s[1])
 	if err != nil {
-		log.Fatal("failed to parse target port:", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to parse target port: %s", err)
 	}
 
 	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)})
@@ -85,9 +87,9 @@ func CreateVhost(input string, useTLS bool) *Vhost {
 	if useTLS {
 		vhost.Cert, vhost.Key, err = MakeCert(hostname)
 		if err != nil {
-			log.Fatalf("failed to generate cert for host %s", hostname)
+			return nil, fmt.Errorf("failed to generate cert for host %s", hostname)
 		}
 	}
 
-	return vhost
+	return vhost, nil
 }

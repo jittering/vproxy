@@ -1,20 +1,31 @@
 package simpleproxy
 
 import (
+	"fmt"
 	"log"
-	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type LoggedMux struct {
 	*http.ServeMux
+	VhostLogListeners map[string]chan string
 }
 
 func NewLoggedMux() *LoggedMux {
-	var mux = &LoggedMux{}
-	mux.ServeMux = http.NewServeMux()
-	return mux
+	return &LoggedMux{
+		ServeMux:          http.NewServeMux(),
+		VhostLogListeners: make(map[string]chan string),
+	}
+}
+
+func (mux *LoggedMux) AddLogListener(host string, listener chan string) {
+	mux.VhostLogListeners[host] = listener
+}
+
+func (mux *LoggedMux) RemoveLogListener(host string) {
+	delete(mux.VhostLogListeners, host)
 }
 
 type LogRecord struct {
@@ -46,11 +57,16 @@ func (mux *LoggedMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	elapsedTime := finishTime.Sub(startTime)
 	host := getHostName(r.Host)
 
-	log.Printf("%s [%s] %s [ %d ] %s %d %s", r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
+	l := fmt.Sprintf("%s [%s] %s [ %d ] %s %d %s", r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
+	log.Println(l)
+
+	if listener, ok := mux.VhostLogListeners[host]; ok {
+		listener <- l
+	}
 }
 
 // ignore port num, if any
 func getHostName(input string) string {
-	host, _, _ := net.SplitHostPort(input)
-	return host
+	s := strings.Split(input, ":")
+	return s[0]
 }
