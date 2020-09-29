@@ -17,9 +17,8 @@ import (
 
 var (
 	bind      = flag.String("bind", "", "Bind hostnames to local ports (app.local.com:7000)")
-	httpPort  = flag.Int("http", 80, "Port to listen for HTTP")
-	httpsPort = flag.Int("https", 443, "Port to listen for TLS (HTTPS)")
-	useTLS    = flag.Bool("tls", false, "Enable TLS")
+	httpPort  = flag.Int("http", 80, "Port to listen for HTTP (0 to disable)")
+	httpsPort = flag.Int("https", 443, "Port to listen for TLS (HTTPS) (0 to disable)")
 )
 
 var message = `<html>
@@ -32,28 +31,29 @@ var message = `<html>
 func main() {
 	flag.Parse()
 
-	if *bind == "" {
+	if *bind == "" && len(flag.Args()) == 0 {
 		log.Fatal("must specify -bind")
 	}
 
+	// create handlers
 	vhost := createVhostMux(bind)
-
 	mux := simpleproxy.NewLoggedMux()
 	mux.Handle("/", vhost)
 
 	// start listeners
-
 	var wg sync.WaitGroup
-	wg.Add(1)
 
-	listenAddr := fmt.Sprintf("127.0.0.1:%d", 80)
-	fmt.Printf("[*] starting proxy: http://%s\n", listenAddr)
-	go func() {
-		log.Fatal(http.ListenAndServe(listenAddr, mux))
-		wg.Done()
-	}()
+	if *httpPort >= 0 {
+		wg.Add(1)
+		listenAddr := fmt.Sprintf("127.0.0.1:%d", 80)
+		fmt.Printf("[*] starting proxy: http://%s\n", listenAddr)
+		go func() {
+			log.Fatal(http.ListenAndServe(listenAddr, mux))
+			wg.Done()
+		}()
+	}
 
-	if *useTLS {
+	if *httpsPort >= 0 {
 		wg.Add(1)
 		go func() {
 			listenTLS(vhost, mux)
@@ -74,7 +74,7 @@ func listenTLS(vhost *simpleproxy.VhostMux, mux *simpleproxy.LoggedMux) {
 		Handler:   mux,
 		TLSConfig: createTLSConfig(vhost),
 	}
-	server.ListenAndServeTLS("", "")
+	log.Fatal(server.ListenAndServeTLS("", ""))
 }
 
 // Create multi-certificate TLS config from vhost config
