@@ -87,7 +87,7 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	if useTLS {
 		vhost.Cert, vhost.Key, err = MakeCert(hostname)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate cert for host %s", hostname)
+			return nil, fmt.Errorf("failed to generate cert for host %s: %s", hostname, err)
 		}
 	}
 

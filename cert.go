@@ -10,6 +10,12 @@ import (
 )
 
 func CertPath() string {
+	if cp := os.Getenv("CERT_PATH"); cp != "" {
+		// override from env
+		return cp
+	}
+
+	// default to user homedir
 	d, err := homedir.Dir()
 	if err != nil {
 		log.Fatalf("failed to locate homedir: %s", err)
@@ -31,6 +37,12 @@ func MakeCert(host string) (string, string, error) {
 	if exists(certFile) && exists(keyFile) {
 		// nothing to do
 		return certFile, keyFile, nil
+	}
+
+	if p := os.Getenv("MKCERT_PATH"); p != "" {
+		// add location of mkcert bin to PATH
+		path := os.Getenv("PATH") + string(os.PathListSeparator) + filepath.Dir(p)
+		os.Setenv("PATH", path)
 	}
 
 	// generate new cert using mkcert util

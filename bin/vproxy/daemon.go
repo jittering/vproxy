@@ -7,9 +7,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/chetan/simpleproxy"
+	"github.com/hairyhenderson/go-which"
+	"github.com/mitchellh/go-homedir"
 )
 
 // PONG server identifier
@@ -29,19 +33,64 @@ type daemon struct {
 	httpsListener net.Listener
 }
 
+func testListener(addr string) {
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		if strings.Contains(err.Error(), "permission denied") {
+			exe, e := os.Executable()
+			if e != nil {
+				log.Fatal(err)
+			}
+
+			fmt.Println("[*] rerunning with sudo")
+
+			args := []string{exe}
+			args = append(args, os.Args[1:]...)
+
+			// pass some locations to sudo env
+			home, e := homedir.Dir()
+			if e != nil {
+				log.Fatal(e)
+			}
+			env := []string{"env", "SUDO_HOME=" + home}
+			env = append(env, "MKCERT_PATH="+which.Which("mkcert"))
+			env = append(env, "CERT_PATH="+simpleproxy.CertPath())
+
+			// use env hack to pass configs into child process inside sudo
+			args = append(env, args...)
+
+			e = syscall.Exec("/usr/bin/sudo", args, nil)
+			if e != nil {
+				log.Fatal(e)
+			}
+			os.Exit(0)
+		}
+		log.Fatal(err)
+	}
+	l.Close()
+}
+
 func (d *daemon) run() {
+	d.httpAddr = fmt.Sprintf("127.0.0.1:%d", d.httpPort)
+	d.httpsAddr = fmt.Sprintf("127.0.0.1:%d", d.httpsPort)
+
+	// require running as root if needed
+	if d.enableHTTP() && d.httpPort < 1024 {
+		testListener(d.httpAddr)
+	} else if d.enableTLS() && d.httpsPort < 1024 {
+		testListener(d.httpsAddr)
+	}
+
 	d.mux.HandleFunc("/_vproxy/hello", d.hello)
 	d.mux.Handle("/_vproxy", d)
 	d.wg.Add(1) // ensure we don't exit immediately
 
 	if d.enableHTTP() {
-		d.httpAddr = fmt.Sprintf("127.0.0.1:%d", d.httpPort)
 		fmt.Printf("[*] starting proxy: http://%s\n", d.httpAddr)
 		go d.startHTTP()
 	}
 
 	if d.enableTLS() {
-		d.httpsAddr = fmt.Sprintf("127.0.0.1:%d", d.httpsPort)
 		fmt.Printf("[*] starting proxy: https://%s\n", d.httpsAddr)
 		if len(d.vhost.Servers) > 0 {
 			fmt.Printf("    vhosts:\n")
