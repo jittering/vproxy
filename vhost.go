@@ -53,8 +53,8 @@ func CreateVhostMux(bindings []string, useTLS bool) *VhostMux {
 	servers := make(map[string]*Vhost)
 	for _, binding := range bindings {
 		if binding != "" {
-			vhost, hostname := CreateVhost(binding, useTLS)
-			servers[hostname] = vhost
+			vhost := CreateVhost(binding, useTLS)
+			servers[vhost.Host] = vhost
 		}
 	}
 
@@ -62,7 +62,7 @@ func CreateVhostMux(bindings []string, useTLS bool) *VhostMux {
 }
 
 // CreateVhost for the host:port pair, optionally with a TLS cert
-func CreateVhost(input string, useTLS bool) (*Vhost, string) {
+func CreateVhost(input string, useTLS bool) *Vhost {
 	s := strings.Split(input, ":")
 	if len(s) < 2 {
 		// invalid binding
@@ -89,5 +89,5 @@ func CreateVhost(input string, useTLS bool) (*Vhost, string) {
 		}
 	}
 
-	return vhost, hostname
+	return vhost
 }
