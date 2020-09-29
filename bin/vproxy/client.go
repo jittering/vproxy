@@ -8,12 +8,15 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
 	"strings"
 )
 
 func startClientMode(addr string) {
 	fmt.Println("[*] found existing daemon, starting in client mode")
-	binding := flag.Args()[0]
+	args := flag.Args()
+	binding := args[0]
 
 	uri := fmt.Sprintf("http://%s/_vproxy", addr)
 	data := url.Values{}
@@ -23,6 +26,10 @@ func startClientMode(addr string) {
 	res, err := http.DefaultClient.PostForm(uri, data)
 	if err != nil {
 		log.Fatalf("error starting client: %s\n", err)
+	}
+
+	if len(args) > 1 {
+		runCommand(args[1:])
 	}
 
 	defer res.Body.Close()
@@ -35,6 +42,18 @@ func startClientMode(addr string) {
 			return
 		}
 		fmt.Print(line)
+	}
+}
+
+func runCommand(args []string) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	fmt.Println("[*] running command:", cmd)
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal("error starting command: ", err)
 	}
 }
 
