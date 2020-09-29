@@ -69,7 +69,12 @@ func (d *daemon) run() {
 	if d.httpsPort > 0 {
 		d.httpsAddr = fmt.Sprintf("127.0.0.1:%d", d.httpsPort)
 		fmt.Printf("[*] starting proxy: https://%s\n", d.httpsAddr)
-		fmt.Printf("    vhosts:\n")
+		if len(d.vhost.Servers) > 0 {
+			fmt.Printf("    vhosts:\n")
+			for _, server := range d.vhost.Servers {
+				fmt.Printf("    - %s -> %d\n", server.Host, server.Port)
+			}
+		}
 		go d.startTLS()
 	}
 	d.wg.Wait()
@@ -109,7 +114,6 @@ func (d *daemon) startTLS() {
 func createTLSConfig(vhost *simpleproxy.VhostMux) *tls.Config {
 	cfg := &tls.Config{}
 	for _, server := range vhost.Servers {
-		fmt.Printf("    - %s -> %d\n", server.Host, server.Port)
 		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
 		if err != nil {
 			log.Fatal("failed to load keypair:", err)
