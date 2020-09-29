@@ -170,7 +170,6 @@ func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rw := w.(*simpleproxy.LogRecord).ResponseWriter
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
-		fmt.Println("flushing not supported..?")
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}

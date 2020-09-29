@@ -14,13 +14,6 @@ var (
 	httpsPort = flag.Int("https", 443, "Port to listen for TLS (HTTPS) (0 to disable)")
 )
 
-var message = `<html>
-<body>
-<h1>502 Bad Gateway</h1>
-<p>Can't connect to upstream server, please try again later.</p>
-</body>
-</html>`
-
 func main() {
 	flag.Parse()
 
