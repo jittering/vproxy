@@ -78,7 +78,7 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 		return nil, fmt.Errorf("failed to parse target port: %s", err)
 	}
 
-	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)})
+	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)}, hostname)
 
 	vhost := &Vhost{
 		Host: hostname, Port: targetPort, Handler: proxy,

@@ -88,7 +88,7 @@ func main() {
 	parseOpts()
 
 	mux := simpleproxy.NewLoggedMux()
-	mux.Handle("/", simpleproxy.CreateProxy(*targetURL))
+	mux.Handle("/", simpleproxy.CreateProxy(*targetURL, ""))
 
 	if *staticFilePath != "" {
 		paths := strings.Split(*staticFilePath, ":")

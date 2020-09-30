@@ -37,13 +37,23 @@ func (t *ProxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 	return response, err
 }
 
-func CreateProxy(targetURL url.URL) *httputil.ReverseProxy {
+func CreateProxy(targetURL url.URL, vhost string) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Director: func(r *http.Request) {
 			p, q := r.URL.Path, r.URL.RawQuery
 			*r.URL = targetURL
 			r.URL.Path, r.URL.RawQuery = p, q
-			r.Host = targetURL.Host
+			if vhost != "" {
+				r.Host = vhost
+				r.Header.Add("X-Forwarded-Host", vhost)
+			} else {
+				r.Host = targetURL.Host
+			}
+			scheme := "http"
+			if r.TLS != nil {
+				scheme = "https"
+			}
+			r.Header.Add("X-Forwarded-Proto", scheme)
 		},
 		Transport: &ProxyTransport{},
 	}
