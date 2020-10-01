@@ -3,11 +3,22 @@ package simpleproxy
 import (
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/icio/mkcert"
 	"github.com/mitchellh/go-homedir"
 )
+
+func CARootPath() string {
+	cmd := exec.Command("mkcert", "-CAROOT")
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal("failed to get mkcert CA path:", err)
+	}
+	return strings.TrimSpace(string(out))
+}
 
 func CertPath() string {
 	if cp := os.Getenv("CERT_PATH"); cp != "" {

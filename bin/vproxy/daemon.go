@@ -33,37 +33,42 @@ type daemon struct {
 	httpsListener net.Listener
 }
 
+func rerunWithSudo() {
+	exe, e := os.Executable()
+	if e != nil {
+		log.Fatal(e)
+	}
+
+	fmt.Println("[*] rerunning with sudo")
+
+	args := []string{exe}
+	args = append(args, os.Args[1:]...)
+
+	// pass some locations to sudo env
+	home, e := homedir.Dir()
+	if e != nil {
+		log.Fatal(e)
+	}
+	env := []string{"env", "SUDO_HOME=" + home}
+	env = append(env, "MKCERT_PATH="+which.Which("mkcert"))
+	env = append(env, "CERT_PATH="+simpleproxy.CertPath())
+	env = append(env, "CAROOT="+simpleproxy.CARootPath())
+
+	// use env hack to pass configs into child process inside sudo
+	args = append(env, args...)
+
+	e = syscall.Exec("/usr/bin/sudo", args, nil)
+	if e != nil {
+		log.Fatal(e)
+	}
+	os.Exit(0)
+}
+
 func testListener(addr string) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		if strings.Contains(err.Error(), "permission denied") {
-			exe, e := os.Executable()
-			if e != nil {
-				log.Fatal(err)
-			}
-
-			fmt.Println("[*] rerunning with sudo")
-
-			args := []string{exe}
-			args = append(args, os.Args[1:]...)
-
-			// pass some locations to sudo env
-			home, e := homedir.Dir()
-			if e != nil {
-				log.Fatal(e)
-			}
-			env := []string{"env", "SUDO_HOME=" + home}
-			env = append(env, "MKCERT_PATH="+which.Which("mkcert"))
-			env = append(env, "CERT_PATH="+simpleproxy.CertPath())
-
-			// use env hack to pass configs into child process inside sudo
-			args = append(env, args...)
-
-			e = syscall.Exec("/usr/bin/sudo", args, nil)
-			if e != nil {
-				log.Fatal(e)
-			}
-			os.Exit(0)
+			rerunWithSudo()
 		}
 		log.Fatal(err)
 	}
@@ -141,14 +146,14 @@ func (d *daemon) startTLS() {
 		log.Fatalf("failed to start listener: %s", err)
 	}
 
-	null, _ := os.Open(os.DevNull)
-	nullLogger := log.New(null, "", 0)
-	defer null.Close()
+	// null, _ := os.Open(os.DevNull)
+	// nullLogger := log.New(null, "", 0)
+	// defer null.Close()
 
 	server := http.Server{
 		Handler:   d.mux,
 		TLSConfig: createTLSConfig(d.vhost),
-		ErrorLog:  nullLogger,
+		// ErrorLog:  nullLogger,
 	}
 
 	err = server.ServeTLS(d.httpsListener, "", "")

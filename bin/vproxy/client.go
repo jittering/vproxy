@@ -16,7 +16,17 @@ import (
 func startClientMode(addr string) {
 	fmt.Println("[*] found existing daemon, starting in client mode")
 	args := flag.Args()
-	binding := args[0]
+
+	if len(args) == 0 && *bind == "" {
+		log.Fatal("missing vhost binding")
+	}
+
+	var binding string
+	if len(args) > 0 {
+		binding = args[0]
+	} else {
+		binding = *bind
+	}
 
 	uri := fmt.Sprintf("http://%s/_vproxy", addr)
 	data := url.Values{}
