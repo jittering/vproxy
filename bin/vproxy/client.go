@@ -21,6 +21,10 @@ func startClientMode(addr string) {
 		log.Fatal("missing vhost binding")
 	}
 
+	if len(args) > 1 {
+		runCommand(args[1:])
+	}
+
 	var binding string
 	if len(args) > 0 {
 		binding = args[0]
@@ -38,10 +42,6 @@ func startClientMode(addr string) {
 		log.Fatalf("error starting client: %s\n", err)
 	}
 
-	if len(args) > 1 {
-		runCommand(args[1:])
-	}
-
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
 	for {
@@ -51,7 +51,7 @@ func startClientMode(addr string) {
 			fmt.Println("exiting")
 			return
 		}
-		fmt.Print(line)
+		log.Print(line)
 	}
 }
 

@@ -210,6 +210,8 @@ func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Listen to connection close and un-register logChan
 	notify := rw.(http.CloseNotifier).CloseNotify()
 
+	fmt.Fprintln(w, "vhost registered successfully")
+
 	for {
 		select {
 		case <-notify:
