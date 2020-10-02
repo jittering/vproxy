@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 )
 
@@ -21,8 +22,9 @@ func startClientMode(addr string) {
 		log.Fatal("missing vhost binding")
 	}
 
+	var cmd *exec.Cmd
 	if len(args) > 1 {
-		runCommand(args[1:])
+		cmd = runCommand(args[1:])
 	}
 
 	var binding string
@@ -42,20 +44,30 @@ func startClientMode(addr string) {
 		log.Fatalf("error starting client: %s\n", err)
 	}
 
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		// catch ^c, cleanup
+		<-c
+		stopCommand(cmd)
+		os.Exit(0)
+	}()
+
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
 			fmt.Printf("error reading from daemon: %s\n", err)
+			stopCommand(cmd)
 			fmt.Println("exiting")
-			return
+			os.Exit(0)
 		}
 		log.Print(line)
 	}
 }
 
-func runCommand(args []string) {
+func runCommand(args []string) *exec.Cmd {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -64,6 +76,17 @@ func runCommand(args []string) {
 	err := cmd.Start()
 	if err != nil {
 		log.Fatal("error starting command: ", err)
+	}
+	return cmd
+}
+
+func stopCommand(cmd *exec.Cmd) {
+	if cmd == nil {
+		return
+	}
+	e := cmd.Process.Kill()
+	if e != nil {
+		fmt.Println("error killing child process:", e)
 	}
 }
 
