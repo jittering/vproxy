@@ -12,6 +12,11 @@ import (
 )
 
 func CARootPath() string {
+	if cp := os.Getenv("CAROOT_PATH"); cp != "" {
+		// override from env
+		return cp
+	}
+
 	cmd := exec.Command("mkcert", "-CAROOT")
 	out, err := cmd.Output()
 	if err != nil {
