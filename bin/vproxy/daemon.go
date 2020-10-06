@@ -24,6 +24,8 @@ type daemon struct {
 	vhost *simpleproxy.VhostMux
 	mux   *simpleproxy.LoggedMux
 
+	listen string
+
 	httpPort     int
 	httpAddr     string
 	httpListener net.Listener
@@ -76,8 +78,8 @@ func testListener(addr string) {
 }
 
 func (d *daemon) run() {
-	d.httpAddr = fmt.Sprintf("127.0.0.1:%d", d.httpPort)
-	d.httpsAddr = fmt.Sprintf("127.0.0.1:%d", d.httpsPort)
+	d.httpAddr = fmt.Sprintf("%s:%d", d.listen, d.httpPort)
+	d.httpsAddr = fmt.Sprintf("%s:%d", d.listen, d.httpsPort)
 
 	// require running as root if needed
 	if d.enableHTTP() && d.httpPort < 1024 {
