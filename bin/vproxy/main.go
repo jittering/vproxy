@@ -39,7 +39,10 @@ func main() {
 
 	// create handlers
 	bindings := strings.Split(*bind, " ")
-	bindings = append(bindings, flag.Args()...)
+	if len(bindings) == 0 {
+		// add bindings from remaining args
+		bindings = append(bindings, flag.Args()[0])
+	}
 	vhost := simpleproxy.CreateVhostMux(bindings, *httpsPort > 0)
 	mux := simpleproxy.NewLoggedMux()
 	mux.Handle("/", vhost)
