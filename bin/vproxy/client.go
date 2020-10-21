@@ -41,6 +41,7 @@ func startClientMode(addr string) {
 	fmt.Println("[*] registering vhost:", binding)
 	res, err := http.DefaultClient.PostForm(uri, data)
 	if err != nil {
+		stopCommand(cmd)
 		log.Fatalf("error starting client: %s\n", err)
 	}
 
@@ -64,29 +65,6 @@ func startClientMode(addr string) {
 			os.Exit(0)
 		}
 		log.Print(line)
-	}
-}
-
-func runCommand(args []string) *exec.Cmd {
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	fmt.Println("[*] running command:", cmd)
-	err := cmd.Start()
-	if err != nil {
-		log.Fatal("error starting command: ", err)
-	}
-	return cmd
-}
-
-func stopCommand(cmd *exec.Cmd) {
-	if cmd == nil {
-		return
-	}
-	e := cmd.Process.Kill()
-	if e != nil {
-		fmt.Println("error killing child process:", e)
 	}
 }
 
