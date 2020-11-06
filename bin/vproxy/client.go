@@ -25,6 +25,20 @@ func startClientMode(addr string) {
 	var cmd *exec.Cmd
 	if len(args) > 1 {
 		cmd = runCommand(args[1:])
+
+		// trap signal for later cleanup
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			// catch ^c, cleanup
+			s := <-c
+			if s == nil {
+				return
+			}
+			fmt.Println("[*] caught signal:", s)
+			stopCommand(cmd)
+			os.Exit(0)
+		}()
 	}
 
 	var binding string
@@ -44,15 +58,6 @@ func startClientMode(addr string) {
 		stopCommand(cmd)
 		log.Fatalf("error starting client: %s\n", err)
 	}
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		// catch ^c, cleanup
-		<-c
-		stopCommand(cmd)
-		os.Exit(0)
-	}()
 
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
