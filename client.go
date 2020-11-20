@@ -1,4 +1,4 @@
-package main
+package vproxy
 
 import (
 	"bufio"
@@ -14,11 +14,11 @@ import (
 	"strings"
 )
 
-func startClientMode(addr string) {
+func StartClientMode(addr string, bind string) {
 	fmt.Println("[*] found existing daemon, starting in client mode")
 	args := flag.Args()
 
-	if len(args) == 0 && *bind == "" {
+	if len(args) == 0 && bind == "" {
 		log.Fatal("missing vhost binding")
 	}
 
@@ -45,7 +45,7 @@ func startClientMode(addr string) {
 	if len(args) > 0 {
 		binding = args[0]
 	} else {
-		binding = *bind
+		binding = bind
 	}
 
 	uri := fmt.Sprintf("http://%s/_vproxy", addr)

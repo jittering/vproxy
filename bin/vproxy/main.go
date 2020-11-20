@@ -32,8 +32,8 @@ func main() {
 	}
 
 	addr := fmt.Sprintf("%s:%d", *listen, *httpPort)
-	if IsDaemonRunning(addr) {
-		startClientMode(addr)
+	if vproxy.IsDaemonRunning(addr) {
+		vproxy.StartClientMode(addr, *bind)
 		return
 	}
 
@@ -48,6 +48,6 @@ func main() {
 	mux.Handle("/", vhost)
 
 	// start daemon
-	d := &daemon{vhost: vhost, mux: mux, listen: *listen, httpPort: *httpPort, httpsPort: *httpsPort}
-	d.run()
+	d := vproxy.NewDaemon(vhost, mux, *listen, *httpPort, *httpsPort)
+	d.Run()
 }

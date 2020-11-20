@@ -1,4 +1,4 @@
-package main
+package vproxy
 
 import (
 	"crypto/tls"
@@ -12,17 +12,16 @@ import (
 	"syscall"
 
 	"github.com/hairyhenderson/go-which"
-	"github.com/jittering/vproxy"
 	"github.com/mitchellh/go-homedir"
 )
 
 // PONG server identifier
 const PONG = "hello from vproxy"
 
-type daemon struct {
+type Daemon struct {
 	wg    sync.WaitGroup
-	vhost *vproxy.VhostMux
-	mux   *vproxy.LoggedMux
+	vhost *VhostMux
+	mux   *LoggedMux
 
 	listen string
 
@@ -33,6 +32,10 @@ type daemon struct {
 	httpsPort     int
 	httpsAddr     string
 	httpsListener net.Listener
+}
+
+func NewDaemon(vhost *VhostMux, mux *LoggedMux, listen string, httpPort int, httpsPort int) *Daemon {
+	return &Daemon{vhost: vhost, mux: mux, listen: listen, httpPort: httpPort, httpsPort: httpsPort}
 }
 
 func rerunWithSudo() {
@@ -53,8 +56,8 @@ func rerunWithSudo() {
 	}
 	env := []string{"env", "SUDO_HOME=" + home}
 	env = append(env, "MKCERT_PATH="+which.Which("mkcert"))
-	env = append(env, "CERT_PATH="+vproxy.CertPath())
-	env = append(env, "CAROOT="+vproxy.CARootPath())
+	env = append(env, "CERT_PATH="+CertPath())
+	env = append(env, "CAROOT="+CARootPath())
 
 	// use env hack to pass configs into child process inside sudo
 	args = append(env, args...)
@@ -77,7 +80,7 @@ func testListener(addr string) {
 	l.Close()
 }
 
-func (d *daemon) run() {
+func (d *Daemon) Run() {
 	d.httpAddr = fmt.Sprintf("%s:%d", d.listen, d.httpPort)
 	d.httpsAddr = fmt.Sprintf("%s:%d", d.listen, d.httpsPort)
 
@@ -112,15 +115,15 @@ func (d *daemon) run() {
 	d.wg.Wait()
 }
 
-func (d *daemon) enableHTTP() bool {
+func (d *Daemon) enableHTTP() bool {
 	return d.httpPort > 0
 }
 
-func (d *daemon) enableTLS() bool {
+func (d *Daemon) enableTLS() bool {
 	return d.httpsPort > 0
 }
 
-func (d *daemon) startHTTP() {
+func (d *Daemon) startHTTP() {
 	d.wg.Add(1)
 	var err error
 	d.httpListener, err = net.Listen("tcp", d.httpAddr)
@@ -140,7 +143,7 @@ func (d *daemon) startHTTP() {
 	d.wg.Done()
 }
 
-func (d *daemon) startTLS() {
+func (d *Daemon) startTLS() {
 	d.wg.Add(1)
 	var err error
 	d.httpsListener, err = net.Listen("tcp", d.httpsAddr)
@@ -165,7 +168,7 @@ func (d *daemon) startTLS() {
 	d.wg.Done()
 }
 
-func (d *daemon) restartTLS() {
+func (d *Daemon) restartTLS() {
 	if d.httpsListener != nil {
 		d.httpsListener.Close()
 	}
@@ -173,8 +176,8 @@ func (d *daemon) restartTLS() {
 	go d.startTLS()
 }
 
-func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rw := w.(*vproxy.LogRecord).ResponseWriter
+func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	rw := w.(*LogRecord).ResponseWriter
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
@@ -182,7 +185,7 @@ func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	binding := r.PostFormValue("binding")
-	vhost, err := vproxy.CreateVhost(binding, d.enableTLS())
+	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
 		fmt.Printf("[*] warning: failed to register new vhost `%s`", binding)
 		w.WriteHeader(http.StatusBadRequest)
@@ -225,13 +228,13 @@ func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (d *daemon) hello(w http.ResponseWriter, r *http.Request) {
+func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	fmt.Fprintln(w, PONG)
 }
 
 // Create multi-certificate TLS config from vhost config
-func createTLSConfig(vhost *vproxy.VhostMux) *tls.Config {
+func createTLSConfig(vhost *VhostMux) *tls.Config {
 	cfg := &tls.Config{}
 	for _, server := range vhost.Servers {
 		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
