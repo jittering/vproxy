@@ -31,3 +31,80 @@ release:
   github:
     owner: jittering
     name: vproxy
+brews:
+  - tap:
+      owner: jittering
+      name: homebrew-kegs
+
+    # Name template of the recipe
+    # Default to project name
+    name: vproxy
+
+    # GOARM to specify which 32-bit arm version to use if there are multiple versions
+    # from the build section. Brew formulas support atm only one 32-bit version.
+    # Default is 6 for all artifacts or each id if there a multiple versions.
+    goarm: 6
+
+    # NOTE: make sure the url_template, the token and given repo (github or gitlab) owner and name are from the
+    # same kind. We will probably unify this in the next major version like it is done with scoop.
+
+
+    # Template for the url which is determined by the given Token (github or gitlab)
+    # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    # Default for gitlab is "https://gitlab.com/<repo_owner>/<repo_name>/uploads/{{ .ArtifactUploadHash }}/{{ .ArtifactName }}"
+    url_template: "https://github.com/jittering/vproxy/releases/{{ .Tag }}/{{ .ArtifactName }}"
+
+    commit_author:
+      name: Chetan Sarva (via goreleaser)
+      email: chetan@pixelcop.net
+
+    folder: Formula
+
+    homepage: "https://github.com/jittering/vproxy"
+    description: "zero-config virtual proxies with tls"
+
+    # skip_upload: true
+
+    # Packages your package depends on.
+    dependencies:
+      - name: mkcert
+
+    # Specify for packages that run as a service.
+    # Default is empty.
+    plist: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+        <dict>
+          <key>KeepAlive</key>
+          <dict>
+            <key>SuccessfulExit</key>
+            <false/>
+          </dict>
+          <key>Label</key>
+          <string>#{plist_name}</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>#{opt_bin}/vproxy</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+          <key>WorkingDirectory</key>
+          <string>#{var}</string>
+          <key>StandardErrorPath</key>
+          <string>#{var}/log/vproxy.log</string>
+          <key>StandardOutPath</key>
+          <string>#{var}/log/vproxy.log</string>
+        </dict>
+      </plist>
+
+
+    test: system "#{bin}/vproxy --version"
+
+    install: |
+      bin.install "vproxy"
+      File.open("#{etc}/vproxy.conf", "w") do |f|
+        f.puts <<-EOF
+      # Sample config file
+      EOF
+      end
