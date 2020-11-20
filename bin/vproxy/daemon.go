@@ -11,8 +11,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/chetan/simpleproxy"
 	"github.com/hairyhenderson/go-which"
+	"github.com/jittering/vproxy"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -21,8 +21,8 @@ const PONG = "hello from vproxy"
 
 type daemon struct {
 	wg    sync.WaitGroup
-	vhost *simpleproxy.VhostMux
-	mux   *simpleproxy.LoggedMux
+	vhost *vproxy.VhostMux
+	mux   *vproxy.LoggedMux
 
 	listen string
 
@@ -53,8 +53,8 @@ func rerunWithSudo() {
 	}
 	env := []string{"env", "SUDO_HOME=" + home}
 	env = append(env, "MKCERT_PATH="+which.Which("mkcert"))
-	env = append(env, "CERT_PATH="+simpleproxy.CertPath())
-	env = append(env, "CAROOT="+simpleproxy.CARootPath())
+	env = append(env, "CERT_PATH="+vproxy.CertPath())
+	env = append(env, "CAROOT="+vproxy.CARootPath())
 
 	// use env hack to pass configs into child process inside sudo
 	args = append(env, args...)
@@ -174,7 +174,7 @@ func (d *daemon) restartTLS() {
 }
 
 func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rw := w.(*simpleproxy.LogRecord).ResponseWriter
+	rw := w.(*vproxy.LogRecord).ResponseWriter
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
@@ -182,7 +182,7 @@ func (d *daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	binding := r.PostFormValue("binding")
-	vhost, err := simpleproxy.CreateVhost(binding, d.enableTLS())
+	vhost, err := vproxy.CreateVhost(binding, d.enableTLS())
 	if err != nil {
 		fmt.Printf("[*] warning: failed to register new vhost `%s`", binding)
 		w.WriteHeader(http.StatusBadRequest)
@@ -231,7 +231,7 @@ func (d *daemon) hello(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create multi-certificate TLS config from vhost config
-func createTLSConfig(vhost *simpleproxy.VhostMux) *tls.Config {
+func createTLSConfig(vhost *vproxy.VhostMux) *tls.Config {
 	cfg := &tls.Config{}
 	for _, server := range vhost.Servers {
 		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)

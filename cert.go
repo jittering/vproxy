@@ -1,4 +1,4 @@
-package simpleproxy
+package vproxy
 
 import (
 	"log"

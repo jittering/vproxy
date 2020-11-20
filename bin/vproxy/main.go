@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/chetan/simpleproxy"
+	"github.com/jittering/vproxy"
 )
 
 var (
@@ -43,8 +43,8 @@ func main() {
 		// add bindings from remaining args
 		bindings = append(bindings, flag.Args()[0])
 	}
-	vhost := simpleproxy.CreateVhostMux(bindings, *httpsPort > 0)
-	mux := simpleproxy.NewLoggedMux()
+	vhost := vproxy.CreateVhostMux(bindings, *httpsPort > 0)
+	mux := vproxy.NewLoggedMux()
 	mux.Handle("/", vhost)
 
 	// start daemon
