@@ -1,53 +1,119 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"strings"
+	"log"
+	"os"
 
 	"github.com/jittering/vproxy"
-)
-
-var (
-	listen    = flag.String("listen", "127.0.0.1", "IP to listen on (0.0.0.0 for all IPs)")
-	bind      = flag.String("bind", "", "Bind hostnames to local ports (app.local.com:7000)")
-	httpPort  = flag.Int("http", 80, "Port to listen for HTTP (0 to disable)")
-	httpsPort = flag.Int("https", 443, "Port to listen for TLS (HTTPS) (0 to disable)")
+	"github.com/urfave/cli/v2"
 )
 
 var defaultListenAddr = "127.0.0.1"
 var anyIP = "0.0.0.0"
 
-func main() {
-	flag.Parse()
+func parseFlags() {
+	app := &cli.App{
+		Name:    "vproxy",
+		Usage:   "zero-config virtual proxies with tls",
+		Version: "0.3",
 
-	// if *bind == "" && len(flag.Args()) == 0 {
-	// 	log.Fatal("must specify -bind")
-	// }
-
-	if *listen == "" {
-		listen = &defaultListenAddr
-	} else if *listen == "0" {
-		listen = &anyIP
+		Commands: []*cli.Command{
+			{
+				Name:    "daemon",
+				Aliases: []string{"server", "d", "s"},
+				Usage:   "run host daemon",
+				Action:  startDaemon,
+				Before:  cleanListenAddr,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "listen",
+						Aliases: []string{"l"},
+						Value:   "127.0.0.1",
+						Usage:   "IP to listen on (0 or 0.0.0.0 for all IPs)",
+					},
+					&cli.IntFlag{
+						Name:  "http",
+						Value: 80,
+						Usage: "Port to listen for HTTP (0 to disable)",
+					},
+					&cli.IntFlag{
+						Name:  "https",
+						Value: 443,
+						Usage: "Port to listen for HTTP (0 to disable)",
+					},
+				},
+			},
+			{
+				Name:    "client",
+				Aliases: []string{"c"},
+				Usage:   "run in client mode",
+				Action:  startClient,
+				Before:  cleanListenAddr,
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:  "http",
+						Value: 80,
+						Usage: "Port to listen for HTTP (0 to disable)",
+					},
+					&cli.StringFlag{
+						Name:     "bind",
+						Required: true,
+						Usage:    "Bind hostnames to local ports (app.local.com:7000)",
+					},
+				},
+			},
+		},
 	}
 
-	addr := fmt.Sprintf("%s:%d", *listen, *httpPort)
-	if vproxy.IsDaemonRunning(addr) {
-		vproxy.StartClientMode(addr, *bind)
-		return
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// create handlers
-	bindings := strings.Split(*bind, " ")
-	if len(bindings) == 0 {
-		// add bindings from remaining args
-		bindings = append(bindings, flag.Args()[0])
+}
+
+func cleanListenAddr(c *cli.Context) error {
+	listen := c.String("listen")
+	if listen == "" {
+		c.Set("listen", defaultListenAddr)
+	} else if listen == "0" {
+		c.Set("listen", anyIP)
 	}
-	vhost := vproxy.CreateVhostMux(bindings, *httpsPort > 0)
+	return nil
+}
+
+func startClient(c *cli.Context) error {
+	listen := c.String("listen")
+	httpPort := c.Int("http")
+	addr := fmt.Sprintf("%s:%d", listen, httpPort)
+
+	if !vproxy.IsDaemonRunning(addr) {
+		log.Fatal("daemon not running on localhost")
+	}
+
+	bind := c.String("bind")
+
+	vproxy.StartClientMode(addr, bind)
+	return nil
+}
+
+func startDaemon(c *cli.Context) error {
+	listen := c.String("listen")
+	httpPort := c.Int("http")
+	httpsPort := c.Int("https")
+
+	vhost := vproxy.CreateVhostMux([]string{}, httpsPort > 0)
 	mux := vproxy.NewLoggedMux()
 	mux.Handle("/", vhost)
 
 	// start daemon
-	d := vproxy.NewDaemon(vhost, mux, *listen, *httpPort, *httpsPort)
+	d := vproxy.NewDaemon(vhost, mux, listen, httpPort, httpsPort)
 	d.Run()
+
+	return nil
+}
+
+func main() {
+	parseFlags()
 }
