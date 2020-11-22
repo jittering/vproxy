@@ -9,8 +9,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var defaultListenAddr = "127.0.0.1"
-var anyIP = "0.0.0.0"
+var listenDefaultAddr = "127.0.0.1"
+var listenAnyIP = "0.0.0.0"
 
 func parseFlags() {
 	app := &cli.App{
@@ -73,12 +73,13 @@ func parseFlags() {
 
 }
 
+// transform listen addr arg
 func cleanListenAddr(c *cli.Context) error {
 	listen := c.String("listen")
 	if listen == "" {
-		c.Set("listen", defaultListenAddr)
+		c.Set("listen", listenDefaultAddr)
 	} else if listen == "0" {
-		c.Set("listen", anyIP)
+		c.Set("listen", listenAnyIP)
 	}
 	return nil
 }
@@ -103,12 +104,12 @@ func startDaemon(c *cli.Context) error {
 	httpPort := c.Int("http")
 	httpsPort := c.Int("https")
 
-	vhost := vproxy.CreateVhostMux([]string{}, httpsPort > 0)
-	mux := vproxy.NewLoggedMux()
-	mux.Handle("/", vhost)
+	vhostMux := vproxy.CreateVhostMux([]string{}, httpsPort > 0)
+	rootMux := vproxy.NewLoggedMux()
+	rootMux.Handle("/", vhostMux)
 
 	// start daemon
-	d := vproxy.NewDaemon(vhost, mux, listen, httpPort, httpsPort)
+	d := vproxy.NewDaemon(vhostMux, rootMux, listen, httpPort, httpsPort)
 	d.Run()
 
 	return nil
