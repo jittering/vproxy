@@ -11,6 +11,9 @@ import (
 
 type Config struct {
 	Server struct {
+		Listen string
+		Http   int
+		Https  int
 	}
 	Client struct {
 		Listen string

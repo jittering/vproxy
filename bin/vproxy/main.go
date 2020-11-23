@@ -96,14 +96,13 @@ func parseFlags() {
 }
 
 // transform listen addr arg
-func cleanListenAddr(c *cli.Context) error {
+func cleanListenAddr(c *cli.Context) {
 	listen := c.String("listen")
 	if listen == "" {
 		c.Set("listen", listenDefaultAddr)
 	} else if listen == "0" {
 		c.Set("listen", listenAnyIP)
 	}
-	return nil
 }
 
 func verbose(c *cli.Context, a ...interface{}) {
@@ -143,6 +142,33 @@ func loadClientConfig(c *cli.Context) error {
 }
 
 func loadDaemonConfig(c *cli.Context) error {
+	conf := vproxy.FindClientConfig(c.String("config"))
+	if cf := c.String("config"); c.IsSet("config") && conf != cf {
+		log.Fatalf("error: config file not found: %s\n", cf)
+	}
+	if conf == "" {
+		return nil
+	}
+	verbose(c, "Loading config file %s", conf)
+	config, err := vproxy.LoadConfigFile(conf)
+	if err != nil {
+		return err
+	}
+	if config != nil {
+		if v := config.Client.Listen; v != "" {
+			verbose(c, "via conf: listen=%s", v)
+			c.Set("listen", v)
+		}
+		if v := config.Server.Http; v > 0 {
+			verbose(c, "via conf: http=%s", v)
+			c.Set("http", strconv.Itoa(v))
+		}
+		if v := config.Server.Https; v > 0 {
+			verbose(c, "via conf: https=%s", v)
+			c.Set("https", strconv.Itoa(v))
+		}
+	}
+	cleanListenAddr(c)
 	return nil
 }
 
