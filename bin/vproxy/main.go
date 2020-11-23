@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/jittering/vproxy"
 	"github.com/urfave/cli/v2"
@@ -13,10 +15,30 @@ var listenDefaultAddr = "127.0.0.1"
 var listenAnyIP = "0.0.0.0"
 
 func parseFlags() {
+
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"V"},
+		Usage:   "print the version",
+	}
+
 	app := &cli.App{
 		Name:    "vproxy",
 		Usage:   "zero-config virtual proxies with tls",
 		Version: "0.3",
+
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "Load configuration from `FILE`. Overrides default file detection",
+			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Usage:   "Verbose output",
+			},
+		},
 
 		Commands: []*cli.Command{
 			{
@@ -24,7 +46,7 @@ func parseFlags() {
 				Aliases: []string{"server", "d", "s"},
 				Usage:   "run host daemon",
 				Action:  startDaemon,
-				Before:  cleanListenAddr,
+				Before:  loadDaemonConfig,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "listen",
@@ -49,7 +71,7 @@ func parseFlags() {
 				Aliases: []string{"c"},
 				Usage:   "run in client mode",
 				Action:  startClient,
-				Before:  cleanListenAddr,
+				Before:  loadClientConfig,
 				Flags: []cli.Flag{
 					&cli.IntFlag{
 						Name:  "http",
@@ -57,9 +79,8 @@ func parseFlags() {
 						Usage: "Port to listen for HTTP (0 to disable)",
 					},
 					&cli.StringFlag{
-						Name:     "bind",
-						Required: true,
-						Usage:    "Bind hostnames to local ports (app.local.com:7000)",
+						Name:  "bind",
+						Usage: "Bind hostnames to local ports (app.local.com:7000)",
 					},
 				},
 			},
@@ -68,7 +89,8 @@ func parseFlags() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("error: %s\n", err)
+		os.Exit(1)
 	}
 
 }
@@ -84,17 +106,60 @@ func cleanListenAddr(c *cli.Context) error {
 	return nil
 }
 
+func verbose(c *cli.Context, a ...interface{}) {
+	if c.IsSet("verbose") {
+		fmt.Printf("[+] "+a[0].(string)+"\n", a[1:]...)
+	}
+}
+
+func loadClientConfig(c *cli.Context) error {
+	conf := vproxy.FindClientConfig(c.String("config"))
+	if cf := c.String("config"); c.IsSet("config") && conf != cf {
+		log.Fatalf("error: config file not found: %s\n", cf)
+	}
+	if conf == "" {
+		return nil
+	}
+	verbose(c, "Loading config file %s", conf)
+	config, err := vproxy.LoadConfigFile(conf)
+	if err != nil {
+		return err
+	}
+	if config != nil {
+		if v := config.Client.Listen; v != "" {
+			verbose(c, "via conf: listen=%s", v)
+			c.Set("listen", v)
+		}
+		if v := config.Client.Http; v > 0 {
+			verbose(c, "via conf: http=%s", v)
+			c.Set("http", strconv.Itoa(v))
+		}
+		if v := config.Client.Bind; v != "" {
+			verbose(c, "via conf: bind=%s", v)
+			c.Set("bind", v)
+		}
+	}
+	return nil
+}
+
+func loadDaemonConfig(c *cli.Context) error {
+	return nil
+}
+
 func startClient(c *cli.Context) error {
 	listen := c.String("listen")
 	httpPort := c.Int("http")
-	addr := fmt.Sprintf("%s:%d", listen, httpPort)
-
-	if !vproxy.IsDaemonRunning(addr) {
-		log.Fatal("daemon not running on localhost")
+	bind := c.String("bind")
+	if bind == "" {
+		return fmt.Errorf("missing bind")
 	}
 
-	bind := c.String("bind")
+	addr := fmt.Sprintf("%s:%d", listen, httpPort)
+	if !vproxy.IsDaemonRunning(addr) {
+		return errors.New("daemon not running on localhost")
+	}
 
+	verbose(c, "Found existing daemon, starting in client mode")
 	vproxy.StartClientMode(addr, bind)
 	return nil
 }

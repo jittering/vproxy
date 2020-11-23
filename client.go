@@ -15,7 +15,6 @@ import (
 )
 
 func StartClientMode(addr string, bind string) {
-	fmt.Println("[*] found existing daemon, starting in client mode")
 	args := flag.Args()
 
 	if len(args) == 0 && bind == "" {
