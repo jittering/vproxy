@@ -106,5 +106,23 @@ brews:
       File.open("#{etc}/vproxy.conf", "w") do |f|
         f.puts <<-EOF
       # Sample config file
+      # All commented settings below are defaults
+
+      [server]
+      # IP on which server will listen
+      # To listen on all IPs, set listen = "0.0.0.0"
+      #listen = "127.0.0.1"
+
+      # Ports to listen on
+      #http = 80
+      #https = 443
+
+      [client]
+      #host = "127.0.0.1"
+      #http = 80
+
+      # Use this in local config files, i.e., a .vproxy.conf file located in a
+      # project folder
+      #bind = ""
       EOF
       end

@@ -1,4 +1,4 @@
-package vproxy
+package main
 
 import (
 	"os"
@@ -16,9 +16,9 @@ type Config struct {
 		Https  int
 	}
 	Client struct {
-		Listen string
-		Http   int
-		Bind   string
+		Host string
+		Http int
+		Bind string
 	}
 }
 

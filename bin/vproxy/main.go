@@ -73,6 +73,11 @@ func parseFlags() {
 				Action:  startClient,
 				Before:  loadClientConfig,
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "host",
+						Value: "127.0.0.1",
+						Usage: "Server host IP",
+					},
 					&cli.IntFlag{
 						Name:  "http",
 						Value: 80,
@@ -80,7 +85,7 @@ func parseFlags() {
 					},
 					&cli.StringFlag{
 						Name:  "bind",
-						Usage: "Bind hostnames to local ports (app.local.com:7000)",
+						Usage: "Bind hostnames to local ports (e.g., app.local.com:7000)",
 					},
 				},
 			},
@@ -112,7 +117,7 @@ func verbose(c *cli.Context, a ...interface{}) {
 }
 
 func loadClientConfig(c *cli.Context) error {
-	conf := vproxy.FindClientConfig(c.String("config"))
+	conf := FindClientConfig(c.String("config"))
 	if cf := c.String("config"); c.IsSet("config") && conf != cf {
 		log.Fatalf("error: config file not found: %s\n", cf)
 	}
@@ -120,14 +125,14 @@ func loadClientConfig(c *cli.Context) error {
 		return nil
 	}
 	verbose(c, "Loading config file %s", conf)
-	config, err := vproxy.LoadConfigFile(conf)
+	config, err := LoadConfigFile(conf)
 	if err != nil {
 		return err
 	}
 	if config != nil {
-		if v := config.Client.Listen; v != "" {
-			verbose(c, "via conf: listen=%s", v)
-			c.Set("listen", v)
+		if v := config.Client.Host; v != "" {
+			verbose(c, "via conf: host=%s", v)
+			c.Set("host", v)
 		}
 		if v := config.Client.Http; v > 0 {
 			verbose(c, "via conf: http=%s", v)
@@ -142,7 +147,7 @@ func loadClientConfig(c *cli.Context) error {
 }
 
 func loadDaemonConfig(c *cli.Context) error {
-	conf := vproxy.FindClientConfig(c.String("config"))
+	conf := FindClientConfig(c.String("config"))
 	if cf := c.String("config"); c.IsSet("config") && conf != cf {
 		log.Fatalf("error: config file not found: %s\n", cf)
 	}
@@ -150,12 +155,12 @@ func loadDaemonConfig(c *cli.Context) error {
 		return nil
 	}
 	verbose(c, "Loading config file %s", conf)
-	config, err := vproxy.LoadConfigFile(conf)
+	config, err := LoadConfigFile(conf)
 	if err != nil {
 		return err
 	}
 	if config != nil {
-		if v := config.Client.Listen; v != "" {
+		if v := config.Server.Listen; v != "" {
 			verbose(c, "via conf: listen=%s", v)
 			c.Set("listen", v)
 		}
@@ -173,14 +178,14 @@ func loadDaemonConfig(c *cli.Context) error {
 }
 
 func startClient(c *cli.Context) error {
-	listen := c.String("listen")
+	host := c.String("host")
 	httpPort := c.Int("http")
 	bind := c.String("bind")
 	if bind == "" {
 		return fmt.Errorf("missing bind")
 	}
 
-	addr := fmt.Sprintf("%s:%d", listen, httpPort)
+	addr := fmt.Sprintf("%s:%d", host, httpPort)
 	if !vproxy.IsDaemonRunning(addr) {
 		return errors.New("daemon not running on localhost")
 	}
