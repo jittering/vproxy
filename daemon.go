@@ -185,11 +185,42 @@ func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	binding := r.PostFormValue("binding")
+	logChan, vhost := d.addVhost(binding, w)
+	if vhost == nil {
+		return
+	}
+
+	defer func() {
+		// Remove this client when this handler exits
+		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
+		d.mux.RemoveLogListener(vhost.Host)
+		d.restartTLS()
+	}()
+
+	// runs forever until connection closes
+	d.relayLogsUntilClose(flusher, logChan, rw, w)
+}
+
+func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, rw http.ResponseWriter, w http.ResponseWriter) {
+	// Listen to connection close and un-register logChan
+	notify := rw.(http.CloseNotifier).CloseNotify()
+	for {
+		select {
+		case <-notify:
+			return
+		case line := <-logChan:
+			fmt.Fprintln(w, line)
+			flusher.Flush()
+		}
+	}
+}
+
+func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *Vhost) {
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
 		fmt.Printf("[*] warning: failed to register new vhost `%s`", binding)
 		w.WriteHeader(http.StatusBadRequest)
-		return
+		return nil, nil
 	}
 
 	fmt.Printf("[*] registering new vhost: %s -> %d\n", vhost.Host, vhost.Port)
@@ -204,28 +235,7 @@ func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logChan := make(chan string)
 	d.mux.AddLogListener(vhost.Host, logChan)
 	d.restartTLS()
-
-	// Remove this client when this handler exits.
-	defer func() {
-		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
-		d.mux.RemoveLogListener(vhost.Host)
-		d.restartTLS()
-	}()
-
-	// Listen to connection close and un-register logChan
-	notify := rw.(http.CloseNotifier).CloseNotify()
-
-	fmt.Fprintln(w, "vhost registered successfully")
-
-	for {
-		select {
-		case <-notify:
-			return
-		default:
-			fmt.Fprintln(w, <-logChan)
-			flusher.Flush()
-		}
-	}
+	return logChan, vhost
 }
 
 func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
