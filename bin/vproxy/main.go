@@ -130,15 +130,15 @@ func loadClientConfig(c *cli.Context) error {
 		return err
 	}
 	if config != nil {
-		if v := config.Client.Host; v != "" {
+		if v := config.Client.Host; v != "" && !c.IsSet("host") {
 			verbose(c, "via conf: host=%s", v)
 			c.Set("host", v)
 		}
-		if v := config.Client.Http; v > 0 {
+		if v := config.Client.Http; v > 0 && !c.IsSet("http") {
 			verbose(c, "via conf: http=%s", v)
 			c.Set("http", strconv.Itoa(v))
 		}
-		if v := config.Client.Bind; v != "" {
+		if v := config.Client.Bind; v != "" && !c.IsSet("bind") {
 			verbose(c, "via conf: bind=%s", v)
 			c.Set("bind", v)
 		}
@@ -160,15 +160,15 @@ func loadDaemonConfig(c *cli.Context) error {
 		return err
 	}
 	if config != nil {
-		if v := config.Server.Listen; v != "" {
+		if v := config.Server.Listen; v != "" && !c.IsSet("listen") {
 			verbose(c, "via conf: listen=%s", v)
 			c.Set("listen", v)
 		}
-		if v := config.Server.Http; v > 0 {
+		if v := config.Server.Http; v > 0 && !c.IsSet("http") {
 			verbose(c, "via conf: http=%s", v)
 			c.Set("http", strconv.Itoa(v))
 		}
-		if v := config.Server.Https; v > 0 {
+		if v := config.Server.Https; v > 0 && !c.IsSet("https") {
 			verbose(c, "via conf: https=%s", v)
 			c.Set("https", strconv.Itoa(v))
 		}
