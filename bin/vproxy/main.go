@@ -3,9 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
 
 	"github.com/jittering/vproxy"
 	"github.com/urfave/cli/v2"
@@ -100,81 +98,10 @@ func parseFlags() {
 
 }
 
-// transform listen addr arg
-func cleanListenAddr(c *cli.Context) {
-	listen := c.String("listen")
-	if listen == "" {
-		c.Set("listen", listenDefaultAddr)
-	} else if listen == "0" {
-		c.Set("listen", listenAnyIP)
-	}
-}
-
 func verbose(c *cli.Context, a ...interface{}) {
 	if c.IsSet("verbose") {
 		fmt.Printf("[+] "+a[0].(string)+"\n", a[1:]...)
 	}
-}
-
-func loadClientConfig(c *cli.Context) error {
-	conf := FindClientConfig(c.String("config"))
-	if cf := c.String("config"); c.IsSet("config") && conf != cf {
-		log.Fatalf("error: config file not found: %s\n", cf)
-	}
-	if conf == "" {
-		return nil
-	}
-	verbose(c, "Loading config file %s", conf)
-	config, err := LoadConfigFile(conf)
-	if err != nil {
-		return err
-	}
-	if config != nil {
-		if v := config.Client.Host; v != "" && !c.IsSet("host") {
-			verbose(c, "via conf: host=%s", v)
-			c.Set("host", v)
-		}
-		if v := config.Client.Http; v > 0 && !c.IsSet("http") {
-			verbose(c, "via conf: http=%s", v)
-			c.Set("http", strconv.Itoa(v))
-		}
-		if v := config.Client.Bind; v != "" && !c.IsSet("bind") {
-			verbose(c, "via conf: bind=%s", v)
-			c.Set("bind", v)
-		}
-	}
-	return nil
-}
-
-func loadDaemonConfig(c *cli.Context) error {
-	conf := FindClientConfig(c.String("config"))
-	if cf := c.String("config"); c.IsSet("config") && conf != cf {
-		log.Fatalf("error: config file not found: %s\n", cf)
-	}
-	if conf == "" {
-		return nil
-	}
-	verbose(c, "Loading config file %s", conf)
-	config, err := LoadConfigFile(conf)
-	if err != nil {
-		return err
-	}
-	if config != nil {
-		if v := config.Server.Listen; v != "" && !c.IsSet("listen") {
-			verbose(c, "via conf: listen=%s", v)
-			c.Set("listen", v)
-		}
-		if v := config.Server.Http; v > 0 && !c.IsSet("http") {
-			verbose(c, "via conf: http=%s", v)
-			c.Set("http", strconv.Itoa(v))
-		}
-		if v := config.Server.Https; v > 0 && !c.IsSet("https") {
-			verbose(c, "via conf: https=%s", v)
-			c.Set("https", strconv.Itoa(v))
-		}
-	}
-	cleanListenAddr(c)
-	return nil
 }
 
 func startClient(c *cli.Context) error {
