@@ -118,7 +118,7 @@ func startClient(c *cli.Context) error {
 	}
 
 	verbose(c, "Found existing daemon, starting in client mode")
-	vproxy.StartClientMode(addr, bind)
+	vproxy.StartClientMode(addr, bind, c.Args().Slice())
 	return nil
 }
 
