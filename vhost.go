@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/cbednarski/hostess/hostess"
 )
 
 type Vhost struct {
@@ -80,6 +82,9 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 
 	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)}, hostname)
 
+	// Add IP to hosts
+	addToHosts(hostname)
+
 	vhost := &Vhost{
 		Host: hostname, Port: targetPort, Handler: proxy,
 	}
@@ -92,4 +97,26 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	}
 
 	return vhost, nil
+}
+
+func addToHosts(host string) error {
+	hosts, errs := hostess.LoadHostfile()
+	if len(errs) > 0 {
+		return errs[0]
+	}
+
+	hostname, err := hostess.NewHostname(host, "127.0.0.1", true)
+	if err != nil {
+		return err
+	}
+
+	err = hosts.Hosts.Add(hostname)
+	if err != nil {
+		if !strings.Contains(err.Error(), "duplicate") {
+			// ignore duplicate hostname errors (already added previously)
+			return err
+		}
+	}
+
+	return hosts.Save()
 }
