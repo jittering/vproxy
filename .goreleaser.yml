@@ -86,6 +86,7 @@ brews:
           <key>ProgramArguments</key>
           <array>
             <string>#{opt_bin}/vproxy</string>
+            <string>daemon</string>
           </array>
           <key>RunAtLoad</key>
           <true/>

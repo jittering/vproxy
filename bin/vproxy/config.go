@@ -1,28 +1,30 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/mitchellh/go-homedir"
+	"github.com/pelletier/go-toml"
 	"github.com/urfave/cli/v2"
 )
 
 // Config file fields for vproxy
 type Config struct {
-	server struct {
-		listen string
+	Server struct {
+		Listen string
 		HTTP   int
 		HTTPS  int
 	}
+
 	Client struct {
-		host string
+		Host string
 		HTTP int
-		bind string
+		Bind string
 	}
 }
 
@@ -70,7 +72,12 @@ func findDaemonConfig(path string) string {
 
 func loadConfigFile(path string) (*Config, error) {
 	var conf Config
-	if _, err := toml.DecodeFile(path, &conf); err != nil {
+	t, err := toml.LoadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = t.Unmarshal(&conf)
+	if err != nil {
 		return nil, err
 	}
 	return &conf, nil
@@ -100,15 +107,15 @@ func loadClientConfig(c *cli.Context) error {
 		return err
 	}
 	if config != nil {
-		if v := config.Client.host; v != "" && !c.IsSet("host") {
+		if v := config.Client.Host; v != "" && !c.IsSet("host") {
 			verbose(c, "via conf: host=%s", v)
 			c.Set("host", v)
 		}
 		if v := config.Client.HTTP; v > 0 && !c.IsSet("http") {
-			verbose(c, "via conf: http=%s", v)
+			verbose(c, "via conf: http=%d", v)
 			c.Set("http", strconv.Itoa(v))
 		}
-		if v := config.Client.bind; v != "" && !c.IsSet("bind") {
+		if v := config.Client.Bind; v != "" && !c.IsSet("bind") {
 			verbose(c, "via conf: bind=%s", v)
 			c.Set("bind", v)
 		}
@@ -129,17 +136,18 @@ func loadDaemonConfig(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("conf: %+v\n", config)
 	if config != nil {
-		if v := config.server.listen; v != "" && !c.IsSet("listen") {
+		if v := config.Server.Listen; v != "" && !c.IsSet("listen") {
 			verbose(c, "via conf: listen=%s", v)
 			c.Set("listen", v)
 		}
-		if v := config.server.HTTP; v > 0 && !c.IsSet("http") {
-			verbose(c, "via conf: http=%s", v)
+		if v := config.Server.HTTP; v > 0 && !c.IsSet("http") {
+			verbose(c, "via conf: http=%d", v)
 			c.Set("http", strconv.Itoa(v))
 		}
-		if v := config.server.HTTPS; v > 0 && !c.IsSet("https") {
-			verbose(c, "via conf: https=%s", v)
+		if v := config.Server.HTTPS; v > 0 && !c.IsSet("https") {
+			verbose(c, "via conf: https=%d", v)
 			c.Set("https", strconv.Itoa(v))
 		}
 	}
