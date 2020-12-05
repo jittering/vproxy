@@ -9,10 +9,27 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var (
+	version string
+	commit  string
+	date    string
+	builtBy string
+)
+
 var listenDefaultAddr = "127.0.0.1"
 var listenAnyIP = "0.0.0.0"
 
 func parseFlags() {
+
+	if version == "" {
+		version = "n/a"
+	}
+	if commit == "" {
+		commit = "head"
+	}
+	if date == "" {
+		date = "n/a"
+	}
 
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:    "version",
@@ -23,7 +40,7 @@ func parseFlags() {
 	app := &cli.App{
 		Name:    "vproxy",
 		Usage:   "zero-config virtual proxies with tls",
-		Version: "0.3",
+		Version: version,
 
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -88,6 +105,10 @@ func parseFlags() {
 				},
 			},
 		},
+	}
+
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Printf("%s version %s (commit: %s, built %s)\n", c.App.Name, c.App.Version, commit, date)
 	}
 
 	err := app.Run(os.Args)
