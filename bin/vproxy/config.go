@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -136,7 +135,6 @@ func loadDaemonConfig(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("conf: %+v\n", config)
 	if config != nil {
 		if v := config.Server.Listen; v != "" && !c.IsSet("listen") {
 			verbose(c, "via conf: listen=%s", v)
