@@ -85,7 +85,7 @@ brews:
           <string>#{plist_name}</string>
           <key>ProgramArguments</key>
           <array>
-            <string>#{opt_bin}/vproxy</string>
+            <string>#{bin}/vproxy</string>
             <string>daemon</string>
           </array>
           <key>RunAtLoad</key>
@@ -105,7 +105,7 @@ brews:
     install: |
       bin.install "vproxy"
       File.open("#{etc}/vproxy.conf", "w") do |f|
-        f.puts <<-EOF
+        str = <<-EOF
       # Sample config file
       # All commented settings below are defaults
 
@@ -126,4 +126,5 @@ brews:
       # project folder
       #bind = ""
       EOF
+        f.puts str.gsub(/\s+/, "")
       end
