@@ -10,3 +10,8 @@ build-mac:
 release:
 	goreleaser release --rm-dist
 
+build-brew:
+	 go build -o vproxy ./bin/vproxy/
+	 sudo mv vproxy /usr/local/opt/vproxy/bin/vproxy
+	 sudo killall vproxy
+

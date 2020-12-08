@@ -118,6 +118,19 @@ brews:
       #http = 80
       #https = 443
 
+
+      # The following paths are set explicitly to facilitate running as root
+
+      # mkcert's CAROOT path
+      # Set to output of `mkcert -CAROOT`
+      caroot_path = "#{`mkcert -CAROOT`.strip}"
+
+      # Path where generated certificates should be stored
+      cert_path = "#{ENV['HOME']}/.vproxy"
+
+      # Path to mkcert program
+      mkcert_path = "#{`which mkcert`.strip}"
+
       [client]
       #host = "127.0.0.1"
       #http = 80
