@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,10 @@ type Config struct {
 		Listen string
 		HTTP   int
 		HTTPS  int
+
+		CaRootPath string `toml:"caroot_path"`
+		CertPath   string `toml:"cert_path"`
+		MkcertPath string `toml:"mkcert_path"`
 	}
 
 	Client struct {
@@ -70,11 +75,11 @@ func findDaemonConfig(path string) string {
 }
 
 func loadConfigFile(path string) (*Config, error) {
-	var conf Config
 	t, err := toml.LoadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	var conf Config
 	err = t.Unmarshal(&conf)
 	if err != nil {
 		return nil, err
@@ -130,11 +135,13 @@ func loadDaemonConfig(c *cli.Context) error {
 	if conf == "" {
 		return nil
 	}
+
 	verbose(c, "Loading config file %s", conf)
 	config, err := loadConfigFile(conf)
 	if err != nil {
 		return err
 	}
+
 	if config != nil {
 		if v := config.Server.Listen; v != "" && !c.IsSet("listen") {
 			verbose(c, "via conf: listen=%s", v)
@@ -147,6 +154,23 @@ func loadDaemonConfig(c *cli.Context) error {
 		if v := config.Server.HTTPS; v > 0 && !c.IsSet("https") {
 			verbose(c, "via conf: https=%d", v)
 			c.Set("https", strconv.Itoa(v))
+		}
+		if v := config.Server.CaRootPath; v != "" {
+			os.Setenv("CAROOT_PATH", v)
+		}
+		if v := config.Server.CertPath; v != "" {
+			os.Setenv("CERT_PATH", v)
+		}
+		if v := config.Server.MkcertPath; v != "" {
+			os.Setenv("MKCERT_PATH", v)
+		} else {
+			// try adding /usr/local/bin to the path as mkcert may commonly be installed there
+			path := os.Getenv("PATH")
+			local := "/usr/local/bin"
+			if !strings.Contains(path, local) {
+				verbose(c, "adding "+local+" to PATH")
+				os.Setenv("PATH", local+string(filepath.ListSeparator)+path)
+			}
 		}
 	}
 	cleanListenAddr(c)

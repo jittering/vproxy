@@ -121,7 +121,7 @@ func parseFlags() {
 
 func verbose(c *cli.Context, a ...interface{}) {
 	if c.IsSet("verbose") {
-		fmt.Printf("[+] "+a[0].(string)+"\n", a[1:]...)
+		fmt.Fprintf(os.Stderr, "[+] "+a[0].(string)+"\n", a[1:]...)
 	}
 }
 

@@ -218,7 +218,8 @@ func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, 
 func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *Vhost) {
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
-		fmt.Printf("[*] warning: failed to register new vhost `%s`", binding)
+		fmt.Printf("[*] warning: failed to register new vhost `%s`\n", binding)
+		fmt.Printf("    %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return nil, nil
 	}
