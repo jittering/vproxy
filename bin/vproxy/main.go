@@ -42,6 +42,11 @@ func parseFlags() {
 		Usage:   "zero-config virtual proxies with tls",
 		Version: version,
 
+		CommandNotFound: func(c *cli.Context, cmd string) {
+			fmt.Printf("error: unknown command '%s'\n\n", cmd)
+			cli.ShowAppHelpAndExit(c, 1)
+		},
+
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
