@@ -18,15 +18,15 @@ archives:
       386: i386
       amd64: x86_64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
 release:
   github:
     owner: jittering
@@ -47,7 +47,6 @@ brews:
 
     # NOTE: make sure the url_template, the token and given repo (github or gitlab) owner and name are from the
     # same kind. We will probably unify this in the next major version like it is done with scoop.
-
 
     # Template for the url which is determined by the given Token (github or gitlab)
     # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
@@ -99,45 +98,49 @@ brews:
         </dict>
       </plist>
 
-
     test: system "#{bin}/vproxy --version"
 
     install: |
       bin.install "vproxy"
-      File.open("#{etc}/vproxy.conf", "w") do |f|
-        str = <<-EOF
-      # Sample config file
-      # All commented settings below are defaults
 
-      [server]
-      # IP on which server will listen
-      # To listen on all IPs, set listen = "0.0.0.0"
-      #listen = "127.0.0.1"
+      # only create if it doesn't already exist
+      conf_file = "#{etc}/vproxy.conf"
+      if !File.exist?(conf_file) then
+        File.open(conf_file, "w") do |f|
+          str = <<-EOF
+        # Sample config file
+        # All commented settings below are defaults
 
-      # Ports to listen on
-      #http = 80
-      #https = 443
+        [server]
+        # IP on which server will listen
+        # To listen on all IPs, set listen = "0.0.0.0"
+        #listen = "127.0.0.1"
+
+        # Ports to listen on
+        #http = 80
+        #https = 443
 
 
-      # The following paths are set explicitly to facilitate running as root
+        # The following paths are set explicitly to facilitate running as root
 
-      # mkcert's CAROOT path
-      # Set to output of `mkcert -CAROOT`
-      caroot_path = "#{`mkcert -CAROOT`.strip}"
+        # mkcert's CAROOT path
+        # Set to output of `mkcert -CAROOT`
+        caroot_path = "#{`mkcert -CAROOT`.strip}"
 
-      # Path where generated certificates should be stored
-      cert_path = "#{ENV['HOME']}/.vproxy"
+        # Path where generated certificates should be stored
+        cert_path = "#{ENV['HOME']}/.vproxy"
 
-      # Path to mkcert program
-      mkcert_path = "#{`which mkcert`.strip}"
+        # Path to mkcert program
+        mkcert_path = "#{`which mkcert`.strip}"
 
-      [client]
-      #host = "127.0.0.1"
-      #http = 80
+        [client]
+        #host = "127.0.0.1"
+        #http = 80
 
-      # Use this in local config files, i.e., a .vproxy.conf file located in a
-      # project folder
-      #bind = ""
-      EOF
-        f.puts str.gsub(/\s+/, "")
+        # Use this in local config files, i.e., a .vproxy.conf file located in a
+        # project folder
+        #bind = ""
+        EOF
+          f.puts str.gsub(/^\s+/, "")
+        end
       end
