@@ -104,11 +104,16 @@ func parseFlags() {
 					},
 				},
 			},
+			{
+				Name:   "version",
+				Usage:  "print the version",
+				Action: printVersion,
+			},
 		},
 	}
 
 	cli.VersionPrinter = func(c *cli.Context) {
-		fmt.Printf("%s version %s (commit: %s, built %s)\n", c.App.Name, c.App.Version, commit, date)
+		printVersion(c)
 	}
 
 	err := app.Run(os.Args)
@@ -123,6 +128,11 @@ func verbose(c *cli.Context, a ...interface{}) {
 	if c.IsSet("verbose") {
 		fmt.Fprintf(os.Stderr, "[+] "+a[0].(string)+"\n", a[1:]...)
 	}
+}
+
+func printVersion(c *cli.Context) error {
+	fmt.Printf("%s version %s (commit: %s, built %s)\n", c.App.Name, c.App.Version, commit, date)
+	return nil
 }
 
 func startClient(c *cli.Context) error {
