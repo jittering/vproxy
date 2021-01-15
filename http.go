@@ -1,8 +1,10 @@
 package vproxy
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -26,23 +28,6 @@ func (mux *LoggedMux) AddLogListener(host string, listener chan string) {
 
 func (mux *LoggedMux) RemoveLogListener(host string) {
 	delete(mux.VhostLogListeners, host)
-}
-
-type LogRecord struct {
-	http.ResponseWriter
-	status        int
-	responseBytes int64
-}
-
-func (r *LogRecord) Write(p []byte) (int, error) {
-	written, err := r.ResponseWriter.Write(p)
-	r.responseBytes += int64(written)
-	return written, err
-}
-
-func (r *LogRecord) WriteHeader(status int) {
-	r.status = status
-	r.ResponseWriter.WriteHeader(status)
 }
 
 func (mux *LoggedMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -69,4 +54,29 @@ func (mux *LoggedMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func getHostName(input string) string {
 	s := strings.Split(input, ":")
 	return s[0]
+}
+
+type LogRecord struct {
+	http.ResponseWriter
+	status        int
+	responseBytes int64
+}
+
+func (r *LogRecord) Write(p []byte) (int, error) {
+	written, err := r.ResponseWriter.Write(p)
+	r.responseBytes += int64(written)
+	return written, err
+}
+
+func (r *LogRecord) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func (r *LogRecord) Hijack() (rwc net.Conn, buf *bufio.ReadWriter, err error) {
+	hj, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		log.Fatal("error: expected a hijacker here")
+	}
+	return hj.Hijack()
 }
