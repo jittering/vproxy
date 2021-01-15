@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// LoggedMux is an http.Server implementation which multiplexes requests to the
+// vhost backends and logs each request.
 type LoggedMux struct {
 	*http.ServeMux
 	VhostLogListeners map[string]chan string
@@ -56,23 +58,28 @@ func getHostName(input string) string {
 	return s[0]
 }
 
+// LogRecord is a thin wrapper around http.ResponseWriter which allows us to
+// capture the number of response bytes written and the http status code.
 type LogRecord struct {
 	http.ResponseWriter
 	status        int
 	responseBytes int64
 }
 
+// Write wrapper that counts bytes
 func (r *LogRecord) Write(p []byte) (int, error) {
 	written, err := r.ResponseWriter.Write(p)
 	r.responseBytes += int64(written)
 	return written, err
 }
 
+// WriteHeader wrapper that captures status code
 func (r *LogRecord) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
 }
 
+// Hijack wrapper
 func (r *LogRecord) Hijack() (rwc net.Conn, buf *bufio.ReadWriter, err error) {
 	hj, ok := r.ResponseWriter.(http.Hijacker)
 	if !ok {
