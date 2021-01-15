@@ -7,7 +7,7 @@ build-linux:
 build-mac:
 	 GOOS=darwin go build -o vproxy-macos-x64 ./bin/vproxy/
 
-release:
+release: clean
 	goreleaser release --rm-dist
 
 build-brew:
@@ -15,3 +15,12 @@ build-brew:
 	 sudo mv vproxy /usr/local/opt/vproxy/bin/vproxy
 	 sudo killall vproxy
 
+clean:
+	rm -f ./vproxy*
+	rm -rf ./dist/
+
+vproxy:
+	go build ./bin/vproxy
+
+install: vproxy
+	sudo cp -a ./vproxy /usr/local/bin/vproxy
