@@ -1,6 +1,8 @@
 package vproxy
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -64,6 +66,16 @@ func MakeCert(host string) (string, string, error) {
 	// generate new cert using mkcert util
 	cert, err := mkcert.Exec(mkcert.Domains(host), mkcert.Directory(cp))
 	if err != nil {
+		nestedErr := errors.Unwrap(err)
+		if nestedErr != nil {
+			if perr, ok := nestedErr.(*exec.ExitError); ok {
+				stderr := string(perr.Stderr)
+				if stderr != "" {
+					return "", "", fmt.Errorf("%s\n%s", err, stderr)
+				}
+			}
+			return "", "", nestedErr
+		}
 		return "", "", err
 	}
 

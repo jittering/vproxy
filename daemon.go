@@ -91,6 +91,11 @@ func (d *Daemon) Run() {
 		testListener(d.httpsAddr)
 	}
 
+	// ensure CAROOT set properly
+	if os.Getenv("CAROOT_PATH") != "" {
+		os.Setenv("CAROOT", os.Getenv("CAROOT_PATH"))
+	}
+
 	d.mux.HandleFunc("/_vproxy/hello", d.hello)
 	d.mux.Handle("/_vproxy", d)
 	d.wg.Add(1) // ensure we don't exit immediately
@@ -219,7 +224,7 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
 		fmt.Printf("[*] warning: failed to register new vhost `%s`\n", binding)
-		fmt.Printf("    %s", err)
+		fmt.Printf("    %s\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return nil, nil
 	}

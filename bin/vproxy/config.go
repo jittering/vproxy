@@ -173,12 +173,15 @@ func loadDaemonConfig(c *cli.Context) error {
 		}
 		if v := config.Server.CaRootPath; v != "" {
 			os.Setenv("CAROOT_PATH", v)
+			verbose(c, "via conf: CAROOT_PATH=%s", v)
 		}
 		if v := config.Server.CertPath; v != "" {
 			os.Setenv("CERT_PATH", v)
+			verbose(c, "via conf: CERT_PATH=%s", v)
 		}
 		if v := config.Server.MkcertPath; v != "" {
 			os.Setenv("MKCERT_PATH", v)
+			verbose(c, "via conf: MKCERT_PATH=%s", v)
 		} else {
 			// try adding /usr/local/bin to the path as mkcert may commonly be installed there
 			path := os.Getenv("PATH")
