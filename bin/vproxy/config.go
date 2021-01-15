@@ -15,7 +15,11 @@ import (
 
 // Config file fields for vproxy
 type Config struct {
+	Verbose bool
+
 	Server struct {
+		Verbose bool
+
 		Listen string
 		HTTP   int
 		HTTPS  int
@@ -26,6 +30,8 @@ type Config struct {
 	}
 
 	Client struct {
+		Verbose bool
+
 		Host string
 		HTTP int
 		Bind string
@@ -111,6 +117,11 @@ func loadClientConfig(c *cli.Context) error {
 		return err
 	}
 	if config != nil {
+		if v := (config.Client.Verbose || config.Verbose); v && !c.IsSet("verbose") {
+			c.Lineage()[1].Set("verbose", "true")
+			verbose(c, "Loading config file %s", conf)
+			verbose(c, "via conf: verbose=true")
+		}
 		if v := config.Client.Host; v != "" && !c.IsSet("host") {
 			verbose(c, "via conf: host=%s", v)
 			c.Set("host", v)
@@ -143,6 +154,11 @@ func loadDaemonConfig(c *cli.Context) error {
 	}
 
 	if config != nil {
+		if v := (config.Server.Verbose || config.Verbose); v && !c.IsSet("verbose") {
+			c.Lineage()[1].Set("verbose", "true")
+			verbose(c, "Loading config file %s", conf)
+			verbose(c, "via conf: verbose=true")
+		}
 		if v := config.Server.Listen; v != "" && !c.IsSet("listen") {
 			verbose(c, "via conf: listen=%s", v)
 			c.Set("listen", v)
