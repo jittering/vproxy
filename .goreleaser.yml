@@ -108,7 +108,13 @@ brews:
       # Sample config file
       # All commented settings below are defaults
 
+      # Enable verbose output
+      #verbose = false
+
       [server]
+      # Enable verbose output (for daemon only)
+      #verbose = false
+
       # IP on which server will listen
       # To listen on all IPs, set listen = "0.0.0.0"
       #listen = "127.0.0.1"
@@ -131,6 +137,9 @@ brews:
       mkcert_path = "#{`which mkcert`.strip}"
 
       [client]
+      # Enable verbose output (for client only)
+      #verbose = false
+
       #host = "127.0.0.1"
       #http = 80
 
