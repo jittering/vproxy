@@ -97,6 +97,7 @@ func (d *Daemon) Run() {
 	}
 
 	d.mux.HandleFunc("/_vproxy/hello", d.hello)
+	d.mux.HandleFunc("/_vproxy/clients", d.listClients)
 	d.mux.Handle("/_vproxy", d)
 	d.wg.Add(1) // ensure we don't exit immediately
 
@@ -247,6 +248,15 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	fmt.Fprintln(w, PONG)
+}
+
+// listClients currently connected to the vproxy daemon
+func (d *Daemon) listClients(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+	fmt.Fprintln(w, "vhosts:")
+	for host, v := range d.vhost.Servers {
+		fmt.Fprintf(w, "%s -> %s:%d\n", host, v.Host, v.Port)
+	}
 }
 
 // Create multi-certificate TLS config from vhost config

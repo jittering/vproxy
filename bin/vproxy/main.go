@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/jittering/vproxy"
 	"github.com/urfave/cli/v2"
@@ -110,6 +114,25 @@ func parseFlags() {
 				},
 			},
 			{
+				Name:    "list",
+				Aliases: []string{"l"},
+				Usage:   "list vhosts",
+				Action:  listClients,
+				Before:  loadClientConfig,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "host",
+						Value: "127.0.0.1",
+						Usage: "vproxy daemon host IP",
+					},
+					&cli.IntFlag{
+						Name:  "http",
+						Value: 80,
+						Usage: "vproxy daemon http port",
+					},
+				},
+			},
+			{
 				Name:   "version",
 				Usage:  "print the version",
 				Action: printVersion,
@@ -172,6 +195,36 @@ func startDaemon(c *cli.Context) error {
 	d.Run()
 
 	return nil
+}
+
+func listClients(c *cli.Context) error {
+	host := c.String("host")
+	httpPort := c.Int("http")
+	addr := fmt.Sprintf("%s:%d", host, httpPort)
+	uri := fmt.Sprintf("http://%s/_vproxy/clients", addr)
+
+	res, err := http.DefaultClient.Get(uri)
+	if err != nil {
+		log.Fatalf("error listing vhosts: %s\n", err)
+	}
+
+	defer res.Body.Close()
+	r := bufio.NewReader(res.Body)
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			if err.Error() == "EOF" {
+				os.Exit(0)
+			}
+			fmt.Printf("error reading from daemon: %s\n", err)
+			os.Exit(1)
+		}
+		if !strings.HasSuffix(line, "\n") {
+			line += "\n"
+		}
+		fmt.Print(line)
+	}
+
 }
 
 func main() {
