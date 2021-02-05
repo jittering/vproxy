@@ -253,7 +253,7 @@ func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
 // listClients currently connected to the vproxy daemon
 func (d *Daemon) listClients(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
-	fmt.Fprintln(w, "vhosts:")
+	fmt.Fprintf(w, " %d vhosts:\n", len(d.vhost.Servers))
 	for _, v := range d.vhost.Servers {
 		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
 	}
