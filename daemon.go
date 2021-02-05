@@ -254,8 +254,8 @@ func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
 func (d *Daemon) listClients(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	fmt.Fprintln(w, "vhosts:")
-	for host, v := range d.vhost.Servers {
-		fmt.Fprintf(w, "%s -> %s:%d\n", host, v.Host, v.Port)
+	for _, v := range d.vhost.Servers {
+		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
 	}
 }
 

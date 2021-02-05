@@ -11,12 +11,16 @@ import (
 	"github.com/cbednarski/hostess/hostess"
 )
 
+// Vhost represents a single backend service
 type Vhost struct {
-	Host    string
-	Port    int
+	Host string // virtual host name
+
+	ServiceHost string // service host or IP
+	Port        int    // service port
+
 	Handler http.Handler
-	Cert    string
-	Key     string
+	Cert    string // TLS Certificate
+	Key     string // TLS Private Key
 }
 
 // VhostMux is an http.Handler whose ServeHTTP forwards the request to
@@ -79,14 +83,15 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse target port: %s", err)
 	}
+	targetHost := "127.0.0.1"
 
-	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", targetPort)}, hostname)
+	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", targetHost, targetPort)}, hostname)
 
 	// Add IP to hosts
 	addToHosts(hostname)
 
 	vhost := &Vhost{
-		Host: hostname, Port: targetPort, Handler: proxy,
+		Host: hostname, ServiceHost: targetHost, Port: targetPort, Handler: proxy,
 	}
 
 	if useTLS {
