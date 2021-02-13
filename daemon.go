@@ -222,7 +222,7 @@ func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, 
 	}
 }
 
-// addVhost for the given binding
+// addVhost for the given binding to the LoggedHandler
 func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *Vhost) {
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
