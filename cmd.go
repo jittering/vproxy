@@ -27,7 +27,7 @@ func stopCommand(cmd *exec.Cmd) {
 		return
 	}
 	fmt.Println("[*] stopping process", cmd.Process.Pid)
-	e := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	e := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
 	if e != nil {
 		fmt.Println("error killing child process:", e)
 	}
