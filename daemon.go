@@ -87,7 +87,8 @@ func (d *Daemon) Run() {
 	// require running as root if needed
 	if d.enableHTTP() && d.httpPort < 1024 {
 		testListener(d.httpAddr)
-	} else if d.enableTLS() && d.httpsPort < 1024 {
+	}
+	if d.enableTLS() && d.httpsPort < 1024 {
 		testListener(d.httpsAddr)
 	}
 
