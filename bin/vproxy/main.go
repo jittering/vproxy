@@ -187,8 +187,7 @@ func startDaemon(c *cli.Context) error {
 	httpsPort := c.Int("https")
 
 	vhostMux := vproxy.CreateVhostMux([]string{}, httpsPort > 0)
-	rootMux := vproxy.NewLoggedMux()
-	rootMux.Handle("/", vhostMux)
+	rootMux := vproxy.NewLoggedHandler(vhostMux)
 
 	// start daemon
 	d := vproxy.NewDaemon(vhostMux, rootMux, listen, httpPort, httpsPort)

@@ -21,7 +21,7 @@ const PONG = "hello from vproxy"
 type Daemon struct {
 	wg    sync.WaitGroup
 	vhost *VhostMux
-	mux   *LoggedMux
+	mux   *LoggedHandler
 
 	listen string
 
@@ -34,7 +34,7 @@ type Daemon struct {
 	httpsListener net.Listener
 }
 
-func NewDaemon(vhost *VhostMux, mux *LoggedMux, listen string, httpPort int, httpsPort int) *Daemon {
+func NewDaemon(vhost *VhostMux, mux *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
 	return &Daemon{vhost: vhost, mux: mux, listen: listen, httpPort: httpPort, httpsPort: httpsPort}
 }
 

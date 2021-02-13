@@ -12,8 +12,7 @@ func TestListClients(t *testing.T) {
 	response := httptest.NewRecorder()
 
 	vhostMux := CreateVhostMux([]string{}, true)
-	rootMux := NewLoggedMux()
-	rootMux.Handle("/", vhostMux)
+	rootMux := NewLoggedHandler(vhostMux)
 
 	// start daemon
 	d := NewDaemon(vhostMux, rootMux, "127.0.0.1", 80, 443)

@@ -53,7 +53,7 @@ func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vhost.Handler.ServeHTTP(w, r)
 }
 
-// CreateVhostMux config from list of bindings
+// CreateVhostMux config, optionally initialized with a list of bindings
 func CreateVhostMux(bindings []string, useTLS bool) *VhostMux {
 	servers := make(map[string]*Vhost)
 	for _, binding := range bindings {

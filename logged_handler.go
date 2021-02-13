@@ -10,29 +10,32 @@ import (
 	"time"
 )
 
-// LoggedMux is an http.Server implementation which multiplexes requests to the
-// vhost backends and logs each request.
-type LoggedMux struct {
+// LoggedHandler is an http.Server implementation which multiplexes requests to the
+// vhost backends (via a handler) and logs each request.
+type LoggedHandler struct {
 	*http.ServeMux
 	VhostLogListeners map[string]chan string
 }
 
-func NewLoggedMux() *LoggedMux {
-	return &LoggedMux{
+// NewLoggedHandler wraps the given handler with a request/response logger
+func NewLoggedHandler(handler http.Handler) *LoggedHandler {
+	lh := &LoggedHandler{
 		ServeMux:          http.NewServeMux(),
 		VhostLogListeners: make(map[string]chan string),
 	}
+	lh.Handle("/", handler)
+	return lh
 }
 
-func (mux *LoggedMux) AddLogListener(host string, listener chan string) {
+func (mux *LoggedHandler) AddLogListener(host string, listener chan string) {
 	mux.VhostLogListeners[host] = listener
 }
 
-func (mux *LoggedMux) RemoveLogListener(host string) {
+func (mux *LoggedHandler) RemoveLogListener(host string) {
 	delete(mux.VhostLogListeners, host)
 }
 
-func (mux *LoggedMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (mux *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	record := &LogRecord{
 		ResponseWriter: w,
 	}
