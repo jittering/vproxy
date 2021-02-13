@@ -84,8 +84,9 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 		return nil, fmt.Errorf("failed to parse target port: %s", err)
 	}
 	targetHost := "127.0.0.1"
+	targetURL := url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", targetHost, targetPort)}
 
-	proxy := CreateProxy(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", targetHost, targetPort)}, hostname)
+	proxy := CreateProxy(targetURL, hostname)
 
 	// Add IP to hosts
 	addToHosts(hostname)
@@ -104,6 +105,7 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	return vhost, nil
 }
 
+// Map given to host to 127.0.0.1 in system hosts file (usually /etc/hosts)
 func addToHosts(host string) error {
 	hosts, errs := hostess.LoadHostfile()
 	if len(errs) > 0 {
