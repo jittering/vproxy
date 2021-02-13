@@ -2,6 +2,7 @@ package vproxy
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,14 +12,15 @@ import (
 
 var badGatewayMessage = `<html>
 <body>
-<h1>502 Bad Gateway</h1>
-<p>Can't connect to upstream server, please try again later.</p>
+<h1>503 Service Unavailable</h1>
+<p>Can't connect to upstream server (%s &mdash;&gt; %s), please try again later.</p>
 </body>
 </html>`
 
 // proxyTransport is a simple http.RoundTripper implementation which returns a
 // 503 on any error making a request to the upstream (backend) service
 type proxyTransport struct {
+	errMsg string
 }
 
 func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -27,7 +29,7 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 	if err != nil {
 		resp := &http.Response{
 			StatusCode: http.StatusServiceUnavailable,
-			Body:       ioutil.NopCloser(bytes.NewBufferString(badGatewayMessage)),
+			Body:       ioutil.NopCloser(bytes.NewBufferString(t.errMsg)),
 		}
 
 		resp.StatusCode = 503
@@ -37,6 +39,10 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 	}
 
 	return response, err
+}
+
+func createProxyTransport(targetURL url.URL, vhost string) *proxyTransport {
+	return &proxyTransport{errMsg: fmt.Sprintf(badGatewayMessage, targetURL.String(), vhost)}
 }
 
 // CreateProxy with custom http.RoundTripper impl. Sets proper host headers
@@ -59,6 +65,6 @@ func CreateProxy(targetURL url.URL, vhost string) *httputil.ReverseProxy {
 			}
 			r.Header.Add("X-Forwarded-Proto", scheme)
 		},
-		Transport: &proxyTransport{},
+		Transport: createProxyTransport(targetURL, vhost),
 	}
 }
