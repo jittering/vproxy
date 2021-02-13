@@ -18,12 +18,17 @@ import (
 // PONG server identifier
 const PONG = "hello from vproxy"
 
+// Daemon service which hosts all the virtual reverse proxies
+//
+// proxy chain:
+// daemon -> mux (LoggedHandler) -> /* -> VhostMux -> Vhost -> ReverseProxy -> upstream service
 type Daemon struct {
-	wg    sync.WaitGroup
-	vhost *VhostMux
-	mux   *LoggedHandler
+	wg sync.WaitGroup
 
-	listen string
+	vhostMux      *VhostMux
+	loggedHandler *LoggedHandler
+
+	listenHost string
 
 	httpPort     int
 	httpAddr     string
@@ -34,8 +39,9 @@ type Daemon struct {
 	httpsListener net.Listener
 }
 
+// NewDaemon
 func NewDaemon(vhost *VhostMux, mux *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
-	return &Daemon{vhost: vhost, mux: mux, listen: listen, httpPort: httpPort, httpsPort: httpsPort}
+	return &Daemon{vhostMux: vhost, loggedHandler: mux, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
 }
 
 func rerunWithSudo() {
@@ -80,9 +86,10 @@ func testListener(addr string) {
 	l.Close()
 }
 
+// Run the daemon service. Does not return until the service is killed.
 func (d *Daemon) Run() {
-	d.httpAddr = fmt.Sprintf("%s:%d", d.listen, d.httpPort)
-	d.httpsAddr = fmt.Sprintf("%s:%d", d.listen, d.httpsPort)
+	d.httpAddr = fmt.Sprintf("%s:%d", d.listenHost, d.httpPort)
+	d.httpsAddr = fmt.Sprintf("%s:%d", d.listenHost, d.httpsPort)
 
 	// require running as root if needed
 	if d.enableHTTP() && d.httpPort < 1024 {
@@ -97,9 +104,9 @@ func (d *Daemon) Run() {
 		os.Setenv("CAROOT", os.Getenv("CAROOT_PATH"))
 	}
 
-	d.mux.HandleFunc("/_vproxy/hello", d.hello)
-	d.mux.HandleFunc("/_vproxy/clients", d.listClients)
-	d.mux.HandleFunc("/_vproxy", d.registerVhost)
+	d.loggedHandler.HandleFunc("/_vproxy/hello", d.hello)
+	d.loggedHandler.HandleFunc("/_vproxy/clients", d.listClients)
+	d.loggedHandler.HandleFunc("/_vproxy", d.registerVhost)
 	d.wg.Add(1) // ensure we don't exit immediately
 
 	if d.enableHTTP() {
@@ -109,9 +116,9 @@ func (d *Daemon) Run() {
 
 	if d.enableTLS() {
 		fmt.Printf("[*] starting proxy: https://%s\n", d.httpsAddr)
-		if len(d.vhost.Servers) > 0 {
+		if len(d.vhostMux.Servers) > 0 {
 			fmt.Printf("    vhosts:\n")
-			for _, server := range d.vhost.Servers {
+			for _, server := range d.vhostMux.Servers {
 				fmt.Printf("    - %s -> %d\n", server.Host, server.Port)
 			}
 		}
@@ -142,7 +149,7 @@ func (d *Daemon) startHTTP() {
 	nullLogger := log.New(null, "", 0)
 	defer null.Close()
 
-	server := &http.Server{Handler: d.mux, ErrorLog: nullLogger}
+	server := &http.Server{Handler: d.loggedHandler, ErrorLog: nullLogger}
 	err = server.Serve(d.httpListener)
 	// if err != nil {
 	// 	fmt.Printf("[*] error: http server exited with error: %s\n", err)
@@ -163,8 +170,8 @@ func (d *Daemon) startTLS() {
 	// defer null.Close()
 
 	server := http.Server{
-		Handler:   d.mux,
-		TLSConfig: createTLSConfig(d.vhost),
+		Handler:   d.loggedHandler,
+		TLSConfig: createTLSConfig(d.vhostMux),
 		// ErrorLog:  nullLogger,
 	}
 
@@ -201,8 +208,8 @@ func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		// Remove this client when this handler exits
 		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
-		d.mux.RemoveLogListener(vhost.Host)
-		delete(d.vhost.Servers, vhost.Host)
+		d.loggedHandler.RemoveLogListener(vhost.Host)
+		delete(d.vhostMux.Servers, vhost.Host)
 		d.restartTLS()
 	}()
 
@@ -235,7 +242,7 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	}
 
 	fmt.Printf("[*] registering new vhost: %s -> %d\n", vhost.Host, vhost.Port)
-	d.vhost.Servers[vhost.Host] = vhost
+	d.vhostMux.Servers[vhost.Host] = vhost
 
 	// Set the headers related to event streaming.
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -244,7 +251,7 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	logChan := make(chan string, 10)
-	d.mux.AddLogListener(vhost.Host, logChan)
+	d.loggedHandler.AddLogListener(vhost.Host, logChan)
 	d.restartTLS()
 
 	err = addToHosts(vhost.Host)
@@ -265,8 +272,8 @@ func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
 // listClients currently connected to the vproxy daemon
 func (d *Daemon) listClients(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
-	fmt.Fprintf(w, " %d vhosts:\n", len(d.vhost.Servers))
-	for _, v := range d.vhost.Servers {
+	fmt.Fprintf(w, " %d vhosts:\n", len(d.vhostMux.Servers))
+	for _, v := range d.vhostMux.Servers {
 		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
 	}
 }
