@@ -218,10 +218,7 @@ func listClients(c *cli.Context) error {
 			fmt.Printf("error reading from daemon: %s\n", err)
 			os.Exit(1)
 		}
-		if !strings.HasSuffix(line, "\n") {
-			line += "\n"
-		}
-		fmt.Print(line)
+		fmt.Println(strings.TrimSpace(line))
 	}
 
 }
