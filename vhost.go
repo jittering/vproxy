@@ -117,10 +117,11 @@ func addToHosts(host string) error {
 
 	err = hosts.Hosts.Add(hostname)
 	if err != nil {
-		if !strings.Contains(err.Error(), "duplicate") {
+		if strings.Contains(err.Error(), "duplicate") {
 			// ignore duplicate hostname errors (already added previously)
-			return err
+			return nil
 		}
+		return err
 	}
 
 	return hosts.Save()
