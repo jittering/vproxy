@@ -2,7 +2,9 @@ package vproxy
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 type LoggedHandler struct {
 	*http.ServeMux
 	VhostLogListeners map[string]chan string
+	vhostMux          *VhostMux
 }
 
 // NewLoggedHandler wraps the given handler with a request/response logger
@@ -27,22 +30,46 @@ func NewLoggedHandler(handler http.Handler) *LoggedHandler {
 	return lh
 }
 
-func (mux *LoggedHandler) AddLogListener(host string, listener chan string) {
-	mux.VhostLogListeners[host] = listener
+func (lh *LoggedHandler) AddVhost(vhost *Vhost, listener chan string) {
+	lh.VhostLogListeners[vhost.Host] = listener
+	lh.vhostMux.Servers[vhost.Host] = vhost
 }
 
-func (mux *LoggedHandler) RemoveLogListener(host string) {
-	delete(mux.VhostLogListeners, host)
+func (lh *LoggedHandler) RemoveLogListener(host string) {
+	delete(lh.VhostLogListeners, host)
+	delete(lh.vhostMux.Servers, host)
 }
 
-func (mux *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// DumpServers to the given writer
+func (lh *LoggedHandler) DumpServers(w io.Writer) {
+	fmt.Fprintf(w, "%d vhosts:\n", len(lh.vhostMux.Servers))
+	for _, v := range lh.vhostMux.Servers {
+		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
+	}
+}
+
+// Create multi-certificate TLS config from vhost config
+func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
+	cfg := &tls.Config{}
+	for _, server := range lh.vhostMux.Servers {
+		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
+		if err != nil {
+			log.Fatal("failed to load keypair:", err)
+		}
+		cfg.Certificates = append(cfg.Certificates, cert)
+	}
+	cfg.BuildNameToCertificate()
+	return cfg
+}
+
+func (lh *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	record := &LogRecord{
 		ResponseWriter: w,
 	}
 
 	// serve request and capture timings
 	startTime := time.Now()
-	mux.ServeMux.ServeHTTP(record, r)
+	lh.ServeMux.ServeHTTP(record, r)
 	finishTime := time.Now()
 	elapsedTime := finishTime.Sub(startTime)
 	host := getHostName(r.Host)
@@ -50,7 +77,7 @@ func (mux *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	l := fmt.Sprintf("%s [%s] %s [ %d ] %s %d %s", r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
 	log.Println(l)
 
-	if listener, ok := mux.VhostLogListeners[host]; ok {
+	if listener, ok := lh.VhostLogListeners[host]; ok {
 		listener <- l
 	}
 }

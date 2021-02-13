@@ -1,7 +1,6 @@
 package vproxy
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -25,7 +24,6 @@ const PONG = "hello from vproxy"
 type Daemon struct {
 	wg sync.WaitGroup
 
-	vhostMux      *VhostMux
 	loggedHandler *LoggedHandler
 
 	listenHost string
@@ -40,8 +38,8 @@ type Daemon struct {
 }
 
 // NewDaemon
-func NewDaemon(vhost *VhostMux, mux *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
-	return &Daemon{vhostMux: vhost, loggedHandler: mux, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
+func NewDaemon(lh *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
+	return &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
 }
 
 func rerunWithSudo() {
@@ -116,13 +114,7 @@ func (d *Daemon) Run() {
 
 	if d.enableTLS() {
 		fmt.Printf("[*] starting proxy: https://%s\n", d.httpsAddr)
-		if len(d.vhostMux.Servers) > 0 {
-			fmt.Printf("    vhosts:\n")
-			for _, server := range d.vhostMux.Servers {
-				fmt.Printf("    - %s -> %d\n", server.Host, server.Port)
-			}
-		}
-
+		d.loggedHandler.DumpServers(os.Stdout)
 		go d.startTLS()
 	}
 
@@ -171,7 +163,7 @@ func (d *Daemon) startTLS() {
 
 	server := http.Server{
 		Handler:   d.loggedHandler,
-		TLSConfig: createTLSConfig(d.vhostMux),
+		TLSConfig: d.loggedHandler.CreateTLSConfig(),
 		// ErrorLog:  nullLogger,
 	}
 
@@ -209,7 +201,6 @@ func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 		// Remove this client when this handler exits
 		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
 		d.loggedHandler.RemoveLogListener(vhost.Host)
-		delete(d.vhostMux.Servers, vhost.Host)
 		d.restartTLS()
 	}()
 
@@ -242,7 +233,6 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	}
 
 	fmt.Printf("[*] registering new vhost: %s -> %d\n", vhost.Host, vhost.Port)
-	d.vhostMux.Servers[vhost.Host] = vhost
 
 	// Set the headers related to event streaming.
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -251,7 +241,7 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	logChan := make(chan string, 10)
-	d.loggedHandler.AddLogListener(vhost.Host, logChan)
+	d.loggedHandler.AddVhost(vhost, logChan)
 	d.restartTLS()
 
 	err = addToHosts(vhost.Host)
@@ -272,22 +262,5 @@ func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
 // listClients currently connected to the vproxy daemon
 func (d *Daemon) listClients(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
-	fmt.Fprintf(w, " %d vhosts:\n", len(d.vhostMux.Servers))
-	for _, v := range d.vhostMux.Servers {
-		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
-	}
-}
-
-// Create multi-certificate TLS config from vhost config
-func createTLSConfig(vhost *VhostMux) *tls.Config {
-	cfg := &tls.Config{}
-	for _, server := range vhost.Servers {
-		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
-		if err != nil {
-			log.Fatal("failed to load keypair:", err)
-		}
-		cfg.Certificates = append(cfg.Certificates, cert)
-	}
-	cfg.BuildNameToCertificate()
-	return cfg
+	d.loggedHandler.DumpServers(w)
 }
