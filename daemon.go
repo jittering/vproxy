@@ -99,7 +99,7 @@ func (d *Daemon) Run() {
 
 	d.mux.HandleFunc("/_vproxy/hello", d.hello)
 	d.mux.HandleFunc("/_vproxy/clients", d.listClients)
-	d.mux.Handle("/_vproxy", d)
+	d.mux.HandleFunc("/_vproxy", d.registerVhost)
 	d.wg.Add(1) // ensure we don't exit immediately
 
 	if d.enableHTTP() {
@@ -183,7 +183,8 @@ func (d *Daemon) restartTLS() {
 	go d.startTLS()
 }
 
-func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// registerVhost handler
+func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 	rw := w.(*LogRecord).ResponseWriter
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
@@ -201,6 +202,7 @@ func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Remove this client when this handler exits
 		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
 		d.mux.RemoveLogListener(vhost.Host)
+		delete(d.vhost.Servers, vhost.Host)
 		d.restartTLS()
 	}()
 
@@ -222,6 +224,7 @@ func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, 
 	}
 }
 
+// addVhost for the given binding
 func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *Vhost) {
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
@@ -240,9 +243,17 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	logChan := make(chan string)
+	logChan := make(chan string, 10)
 	d.mux.AddLogListener(vhost.Host, logChan)
 	d.restartTLS()
+
+	err = addToHosts(vhost.Host)
+	if err != nil {
+		msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file", vhost.Host)
+		fmt.Println(msg)
+		logChan <- msg
+	}
+
 	return logChan, vhost
 }
 

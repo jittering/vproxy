@@ -88,9 +88,6 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 
 	proxy := CreateProxy(targetURL, hostname)
 
-	// Add IP to hosts
-	addToHosts(hostname)
-
 	vhost := &Vhost{
 		Host: hostname, ServiceHost: targetHost, Port: targetPort, Handler: proxy,
 	}
