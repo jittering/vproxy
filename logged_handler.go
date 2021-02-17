@@ -36,7 +36,7 @@ func (lh *LoggedHandler) AddVhost(vhost *Vhost, listener chan string) {
 	lh.vhostMux.Servers[vhost.Host] = vhost
 }
 
-func (lh *LoggedHandler) RemoveLogListener(host string) {
+func (lh *LoggedHandler) RemoveVhost(host string) {
 	delete(lh.VhostLogListeners, host)
 	delete(lh.vhostMux.Servers, host)
 }

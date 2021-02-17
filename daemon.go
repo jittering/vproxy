@@ -200,7 +200,7 @@ func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		// Remove this client when this handler exits
 		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
-		d.loggedHandler.RemoveLogListener(vhost.Host)
+		d.loggedHandler.RemoveVhost(vhost.Host)
 		d.restartTLS()
 	}()
 
