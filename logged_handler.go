@@ -21,12 +21,13 @@ type LoggedHandler struct {
 }
 
 // NewLoggedHandler wraps the given handler with a request/response logger
-func NewLoggedHandler(handler http.Handler) *LoggedHandler {
+func NewLoggedHandler(vm *VhostMux) *LoggedHandler {
 	lh := &LoggedHandler{
 		ServeMux:          http.NewServeMux(),
 		VhostLogListeners: make(map[string]chan string),
+		vhostMux:          vm,
 	}
-	lh.Handle("/", handler)
+	lh.Handle("/", vm)
 	return lh
 }
 

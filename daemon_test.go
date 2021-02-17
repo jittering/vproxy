@@ -12,10 +12,10 @@ func TestListClients(t *testing.T) {
 	response := httptest.NewRecorder()
 
 	vhostMux := CreateVhostMux([]string{}, true)
-	rootMux := NewLoggedHandler(vhostMux)
+	lh := NewLoggedHandler(vhostMux)
 
 	// start daemon
-	d := NewDaemon(vhostMux, rootMux, "127.0.0.1", 80, 443)
+	d := NewDaemon(lh, "127.0.0.1", 80, 443)
 
 	d.listClients(response, request)
 	if response.Code != http.StatusOK {
