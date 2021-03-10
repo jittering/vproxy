@@ -42,15 +42,15 @@ func CertPath() string {
 }
 
 // MakeCert for the give hostname, if it doesn't already exist.
-func MakeCert(host string) (string, string, error) {
+func MakeCert(host string) (certFile string, keyFile string, err error) {
 	cp := CertPath()
-	err := os.MkdirAll(cp, 0755)
+	err = os.MkdirAll(cp, 0755)
 	if err != nil {
 		return "", "", err
 	}
 
-	certFile := filepath.Join(cp, host+".pem")
-	keyFile := filepath.Join(cp, host+"-key.pem")
+	certFile = filepath.Join(cp, host+".pem")
+	keyFile = filepath.Join(cp, host+"-key.pem")
 
 	if exists(certFile) && exists(keyFile) {
 		// nothing to do
