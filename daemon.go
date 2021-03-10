@@ -246,7 +246,7 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 
 	err = addToHosts(vhost.Host)
 	if err != nil {
-		msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file", vhost.Host)
+		msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file: %s\n", vhost.Host, err)
 		fmt.Println(msg)
 		logChan <- msg
 	}

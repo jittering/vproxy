@@ -106,7 +106,15 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 func addToHosts(host string) error {
 	hosts, errs := hostess.LoadHostfile()
 	if len(errs) > 0 {
-		return errs[0]
+		realErrs := []error{}
+		for _, err := range errs {
+			if !strings.Contains(err.Error(), "duplicate") {
+				realErrs = append(realErrs, err)
+			}
+		}
+		if len(realErrs) > 0 {
+			return realErrs[0]
+		}
 	}
 
 	hostname, err := hostess.NewHostname(host, "127.0.0.1", true)
