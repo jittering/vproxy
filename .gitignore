@@ -2,6 +2,7 @@
 *.o
 *.a
 *.so
+bin/vproxy/__debug_bin
 
 # Folders
 _obj

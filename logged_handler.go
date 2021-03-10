@@ -12,12 +12,18 @@ import (
 	"time"
 )
 
+var defaultTLSHost = "vproxy.local"
+
 // LoggedHandler is an http.Server implementation which multiplexes requests to the
 // vhost backends (via a handler) and logs each request.
 type LoggedHandler struct {
 	*http.ServeMux
 	VhostLogListeners map[string]chan string
 	vhostMux          *VhostMux
+
+	defaultHost string
+	defaultCert string
+	defaultKey  string
 }
 
 // NewLoggedHandler wraps the given handler with a request/response logger
@@ -27,8 +33,21 @@ func NewLoggedHandler(vm *VhostMux) *LoggedHandler {
 		VhostLogListeners: make(map[string]chan string),
 		vhostMux:          vm,
 	}
+
+	lh.defaultHost = defaultTLSHost
+	lh.createDefaultCert()
+
+	// Map all requests, by default, to the appropriate vhost
 	lh.Handle("/", vm)
 	return lh
+}
+
+func (lh *LoggedHandler) createDefaultCert() {
+	var err error
+	lh.defaultCert, lh.defaultKey, err = MakeCert(lh.defaultHost)
+	if err != nil {
+		log.Fatalf("failed to create default cert for vproxy.local: %s", err)
+	}
 }
 
 func (lh *LoggedHandler) AddVhost(vhost *Vhost, listener chan string) {
@@ -52,6 +71,15 @@ func (lh *LoggedHandler) DumpServers(w io.Writer) {
 // Create multi-certificate TLS config from vhost config
 func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
 	cfg := &tls.Config{}
+
+	// Add default internal cert
+	cert, err := tls.LoadX509KeyPair(lh.defaultCert, lh.defaultKey)
+	if err != nil {
+		log.Fatal("failed to load keypair:", err)
+	}
+	cfg.Certificates = append(cfg.Certificates, cert)
+
+	// add cert for each vhost
 	for _, server := range lh.vhostMux.Servers {
 		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
 		if err != nil {
@@ -59,6 +87,8 @@ func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
 		}
 		cfg.Certificates = append(cfg.Certificates, cert)
 	}
+
+	// build cn and return
 	cfg.BuildNameToCertificate()
 	return cfg
 }
