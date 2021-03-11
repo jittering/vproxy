@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+
+	"github.com/cenkalti/backoff/v4"
 )
 
 var badGatewayMessage = `<html>
@@ -24,8 +26,20 @@ type proxyTransport struct {
 }
 
 func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	response, err := http.DefaultTransport.RoundTrip(request)
 
+	var (
+		response *http.Response
+		err      error
+	)
+
+	operation := func() error {
+		response, err = http.DefaultTransport.RoundTrip(request)
+		// Handle Retry-After here, if you wish...
+		// If err is nil, no retry will occur
+		return err
+	}
+
+	err = backoff.Retry(operation, backoff.NewExponentialBackOff())
 	if err != nil {
 		resp := &http.Response{
 			StatusCode: http.StatusServiceUnavailable,
@@ -34,7 +48,7 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 
 		resp.StatusCode = 503
 		resp.Status = "Can't connect to upstream server"
-		log.Println("error ", err)
+		log.Println("error fetching from upstream:", err)
 		return resp, nil
 	}
 
