@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/jittering/vproxy"
@@ -37,9 +38,9 @@ func printVersion(c *cli.Context) error {
 func startClient(c *cli.Context) error {
 	host := c.String("host")
 	httpPort := c.Int("http")
-	bind := c.String("bind")
-	if bind == "" {
-		return fmt.Errorf("missing bind")
+	binds := c.StringSlice("bind")
+	if len(binds) == 0 {
+		return fmt.Errorf("must bind at least one hostname")
 	}
 
 	addr := fmt.Sprintf("%s:%d", host, httpPort)
@@ -47,8 +48,16 @@ func startClient(c *cli.Context) error {
 		return errors.New("daemon not running on localhost")
 	}
 
+	// check all binds
+	reBind := regexp.MustCompile("^.*?:[0-9]+$")
+	for _, bind := range binds {
+		if bind == "" || !reBind.MatchString(bind) {
+			return fmt.Errorf("error: invalid binding: '%s' (expected format 'app.local.com:7000')", bind)
+		}
+	}
+
 	verbose(c, "Found existing daemon, starting in client mode")
-	vproxy.StartClientMode(addr, bind, c.Args().Slice())
+	vproxy.StartClientMode(addr, binds, c.Args().Slice())
 	return nil
 }
 

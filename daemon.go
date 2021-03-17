@@ -251,6 +251,8 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 		logChan <- msg
 	}
 
+	logChan <- fmt.Sprintf("[*] added vhost: %s", binding)
+
 	return logChan, vhost
 }
 

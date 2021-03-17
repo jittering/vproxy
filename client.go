@@ -11,9 +11,10 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+	"sync"
 )
 
-func StartClientMode(addr string, bind string, args []string) {
+func StartClientMode(addr string, binds []string, args []string) {
 	// run command, if given
 	var cmd *exec.Cmd
 	if len(args) > 0 {
@@ -34,6 +35,18 @@ func StartClientMode(addr string, bind string, args []string) {
 		}()
 	}
 
+	wg := &sync.WaitGroup{}
+	for _, bind := range binds {
+		wg.Add(1)
+		go startClientBinding(addr, bind, cmd, wg)
+		wg.Wait()
+	}
+
+	wg.Add(1)
+	wg.Wait()
+}
+
+func startClientBinding(addr string, bind string, cmd *exec.Cmd, wg *sync.WaitGroup) {
 	uri := fmt.Sprintf("http://%s/_vproxy", addr)
 	data := url.Values{}
 	data.Add("binding", bind)
@@ -42,9 +55,10 @@ func StartClientMode(addr string, bind string, args []string) {
 	res, err := http.DefaultClient.PostForm(uri, data)
 	if err != nil {
 		stopCommand(cmd)
-		log.Fatalf("error starting client: %s\n", err)
+		log.Fatalf("error registering client: %s\n", err)
 	}
 
+	wg.Done()
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
 	for {

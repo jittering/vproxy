@@ -91,9 +91,9 @@ func parseFlags() {
 						Value: 80,
 						Usage: "Port to listen for HTTP (0 to disable)",
 					},
-					&cli.StringFlag{
+					&cli.StringSliceFlag{
 						Name:  "bind",
-						Usage: "Bind hostnames to local ports (e.g., app.local.com:7000)",
+						Usage: "Bind hostname to local port (e.g., app.local.com:7000)",
 					},
 				},
 			},
