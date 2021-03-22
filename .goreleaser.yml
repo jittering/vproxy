@@ -150,7 +150,7 @@ brews:
 
       # only create if it doesn't already exist
       conf_file = "#{etc}/vproxy.conf"
-      if File.exist?(conf_file) then
+      if !File.exist?(conf_file) then
         File.open(conf_file, "w") do |f|
           f.puts str.gsub(/^[\t ]+/, "")
         end
