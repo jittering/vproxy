@@ -52,19 +52,15 @@ func MakeCert(host string) (certFile string, keyFile string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	if exists(cert.CertFile) && exists(cert.KeyFile) {
+	if cert.Exists() {
 		// nothing to do
-		return certFile, keyFile, nil
+		return cert.CertFile, cert.KeyFile, nil
 	}
 
+	// generate new cert
 	cert, err = ts.MakeCert([]string{host}, cp)
 	if err != nil {
 		return "", "", err
 	}
 	return cert.CertFile, cert.KeyFile, nil
-}
-
-func exists(file string) bool {
-	_, err := os.Stat(file)
-	return err == nil
 }
