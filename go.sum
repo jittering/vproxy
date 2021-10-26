@@ -12,6 +12,8 @@ github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm4
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jittering/truststore v0.0.0-20211026155913-8ecd90d10988 h1:xnHBmNaCXvTK8Q4ehaczyUG8bVVqLWW0lf4mZJAep7M=
 github.com/jittering/truststore v0.0.0-20211026155913-8ecd90d10988/go.mod h1:1Oqxux2zlUnu3LTJMyO70ndQ6vrITR/cXOrOeswbgN4=
+github.com/jittering/truststore v0.0.0-20211026192954-23f65d32fa19 h1:pHO6m29RxL/DNt5vd+foj+OUkymAKTPx4RDmFJm+tmc=
+github.com/jittering/truststore v0.0.0-20211026192954-23f65d32fa19/go.mod h1:1Oqxux2zlUnu3LTJMyO70ndQ6vrITR/cXOrOeswbgN4=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=

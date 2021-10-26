@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -89,7 +88,12 @@ func listClients(c *cli.Context) error {
 
 	res, err := http.DefaultClient.Get(uri)
 	if err != nil {
-		log.Fatalf("error listing vhosts: %s\n", err)
+		if strings.Contains(err.Error(), "connection refused") {
+			fmt.Printf("error listing vhosts: daemon not running?\n")
+		} else {
+			fmt.Printf("error listing vhosts: %s\n", err)
+		}
+		os.Exit(1)
 	}
 
 	defer res.Body.Close()
