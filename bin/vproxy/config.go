@@ -134,6 +134,10 @@ func loadClientConfig(c *cli.Context) error {
 			verbose(c, "via conf: bind=%s", v)
 			c.Set("bind", v)
 		}
+		if v := config.Server.CaRootPath; v != "" {
+			os.Setenv("CAROOT_PATH", v)
+			verbose(c, "via conf: CAROOT_PATH=%s", v)
+		}
 	}
 	return nil
 }

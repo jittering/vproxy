@@ -117,6 +117,12 @@ func parseFlags() {
 				},
 			},
 			{
+				Name:   "caroot",
+				Usage:  "Print CAROOT path and exit",
+				Action: printCAROOT,
+				Before: loadClientConfig,
+			},
+			{
 				Name:   "version",
 				Usage:  "print the version",
 				Action: printVersion,

@@ -62,6 +62,11 @@ func startClient(c *cli.Context) error {
 }
 
 func startDaemon(c *cli.Context) error {
+	err := vproxy.InitTrustStore()
+	if err != nil {
+		return err
+	}
+
 	listen := c.String("listen")
 	httpPort := c.Int("http")
 	httpsPort := c.Int("https")
@@ -100,7 +105,11 @@ func listClients(c *cli.Context) error {
 		}
 		fmt.Println(strings.TrimSpace(line))
 	}
+}
 
+func printCAROOT(c *cli.Context) error {
+	fmt.Println(vproxy.CARootPath())
+	return nil
 }
 
 func main() {

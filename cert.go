@@ -1,17 +1,21 @@
 package vproxy
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
-	"github.com/icio/mkcert"
+	"github.com/jittering/truststore"
 	"github.com/mitchellh/go-homedir"
 )
+
+var ts *truststore.MkcertLib
+
+func InitTrustStore() error {
+	var err error
+	ts, err = truststore.NewLib()
+	return err
+}
 
 func CARootPath() string {
 	if cp := os.Getenv("CAROOT_PATH"); cp != "" {
@@ -19,12 +23,7 @@ func CARootPath() string {
 		return cp
 	}
 
-	cmd := exec.Command("mkcert", "-CAROOT")
-	out, err := cmd.Output()
-	if err != nil {
-		log.Fatal("failed to get mkcert CA path:", err)
-	}
-	return strings.TrimSpace(string(out))
+	return truststore.GetCAROOT()
 }
 
 func CertPath() string {
@@ -49,37 +48,20 @@ func MakeCert(host string) (certFile string, keyFile string, err error) {
 		return "", "", err
 	}
 
-	certFile = filepath.Join(cp, host+".pem")
-	keyFile = filepath.Join(cp, host+"-key.pem")
-
-	if exists(certFile) && exists(keyFile) {
+	cert, err := ts.CertFile([]string{host}, cp)
+	if err != nil {
+		return "", "", err
+	}
+	if exists(cert.CertFile) && exists(cert.KeyFile) {
 		// nothing to do
 		return certFile, keyFile, nil
 	}
 
-	if p := os.Getenv("MKCERT_PATH"); p != "" {
-		// add location of mkcert bin to PATH
-		path := os.Getenv("PATH") + string(os.PathListSeparator) + filepath.Dir(p)
-		os.Setenv("PATH", path)
-	}
-
-	// generate new cert using mkcert util
-	cert, err := mkcert.Exec(mkcert.Domains(host), mkcert.Directory(cp))
+	cert, err = ts.MakeCert([]string{host}, cp)
 	if err != nil {
-		nestedErr := errors.Unwrap(err)
-		if nestedErr != nil {
-			if perr, ok := nestedErr.(*exec.ExitError); ok {
-				stderr := string(perr.Stderr)
-				if stderr != "" {
-					return "", "", fmt.Errorf("%s\n%s", err, stderr)
-				}
-			}
-			return "", "", nestedErr
-		}
 		return "", "", err
 	}
-
-	return cert.File, cert.KeyFile, nil
+	return cert.CertFile, cert.KeyFile, nil
 }
 
 func exists(file string) bool {
