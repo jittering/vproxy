@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -26,7 +25,6 @@ type Config struct {
 
 		CaRootPath string `toml:"caroot_path"`
 		CertPath   string `toml:"cert_path"`
-		MkcertPath string `toml:"mkcert_path"`
 	}
 
 	Client struct {
@@ -182,18 +180,6 @@ func loadDaemonConfig(c *cli.Context) error {
 		if v := config.Server.CertPath; v != "" {
 			os.Setenv("CERT_PATH", v)
 			verbose(c, "via conf: CERT_PATH=%s", v)
-		}
-		if v := config.Server.MkcertPath; v != "" {
-			os.Setenv("MKCERT_PATH", v)
-			verbose(c, "via conf: MKCERT_PATH=%s", v)
-		} else {
-			// try adding /usr/local/bin to the path as mkcert may commonly be installed there
-			path := os.Getenv("PATH")
-			local := "/usr/local/bin"
-			if !strings.Contains(path, local) {
-				verbose(c, "adding "+local+" to PATH")
-				os.Setenv("PATH", local+string(filepath.ListSeparator)+path)
-			}
 		}
 	}
 	cleanListenAddr(c)

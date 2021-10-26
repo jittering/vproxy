@@ -10,7 +10,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/hairyhenderson/go-which"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -59,7 +58,6 @@ func rerunWithSudo() {
 		log.Fatal(e)
 	}
 	env := []string{"env", "SUDO_HOME=" + home}
-	env = append(env, "MKCERT_PATH="+which.Which("mkcert"))
 	env = append(env, "CERT_PATH="+CertPath())
 	env = append(env, "CAROOT="+CARootPath())
 
