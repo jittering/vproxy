@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -78,6 +79,9 @@ func testListener(addr string) {
 			svc := os.Getenv("XPC_SERVICE_NAME")
 			if svc == "homebrew.mxcl.vproxy" || strings.Contains(svc, "vproxy") {
 				fmt.Println("[*] warning: looks like we are running via launchd; won't try rerunning with sudo")
+				fmt.Println("[*]          instead, run the service as root. see docs for help.")
+			} else if !isatty.IsTerminal(os.Stdin.Fd()) {
+				fmt.Println("[*] warning: looks like we are running as a headless daemon; won't try rerunning with sudo")
 				fmt.Println("[*]          instead, run the service as root. see docs for help.")
 			} else {
 				rerunWithSudo()
