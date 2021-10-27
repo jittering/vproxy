@@ -23,6 +23,8 @@ github.com/jittering/truststore v0.0.0-20211026192954-23f65d32fa19 h1:pHO6m29RxL
 github.com/jittering/truststore v0.0.0-20211026192954-23f65d32fa19/go.mod h1:1Oqxux2zlUnu3LTJMyO70ndQ6vrITR/cXOrOeswbgN4=
 github.com/jittering/truststore v0.0.0-20211027133117-2fe762cab260 h1:U28Z52aCN7NSTuUs1y+4TaKVo3hYzfhX1CtkLEGkVdU=
 github.com/jittering/truststore v0.0.0-20211027133117-2fe762cab260/go.mod h1:1Oqxux2zlUnu3LTJMyO70ndQ6vrITR/cXOrOeswbgN4=
+github.com/jittering/truststore v0.0.0-20211027161121-f6ab96800561 h1:nX/9o1W4gZkF0Lv7LLHzY52yAMcSOeDfu0n3IpZ3T6A=
+github.com/jittering/truststore v0.0.0-20211027161121-f6ab96800561/go.mod h1:1Oqxux2zlUnu3LTJMyO70ndQ6vrITR/cXOrOeswbgN4=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=

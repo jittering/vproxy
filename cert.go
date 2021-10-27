@@ -1,6 +1,7 @@
 package vproxy
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,6 +16,20 @@ func InitTrustStore() error {
 	var err error
 	ts, err = truststore.NewLib()
 	return err
+}
+
+func InstallTrustStore() error {
+	if ts == nil {
+		return fmt.Errorf("error: truststore not initialized")
+	}
+	return ts.Install()
+}
+
+func UninstallTrustStore() error {
+	if ts == nil {
+		return fmt.Errorf("error: truststore not initialized")
+	}
+	return ts.Uninstall()
 }
 
 func CARootPath() string {

@@ -123,6 +123,14 @@ func parseFlags() {
 				Before: loadClientConfig,
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
+						Name:  "create",
+						Usage: "Initialize and install the CAROOT (will not overwrite existing files)",
+					},
+					&cli.BoolFlag{
+						Name:  "uninstall",
+						Usage: "Uninstall the CAROOT (will not remove files)",
+					},
+					&cli.BoolFlag{
 						Name:  "default",
 						Usage: "Get the default CAROOT path (ignoring any config or env vars)",
 					},
