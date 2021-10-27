@@ -89,7 +89,7 @@ func parseFlags() {
 					&cli.IntFlag{
 						Name:  "http",
 						Value: 80,
-						Usage: "Port to listen for HTTP (0 to disable)",
+						Usage: "Server HTTP port",
 					},
 					&cli.StringSliceFlag{
 						Name:  "bind",
