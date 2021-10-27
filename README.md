@@ -1,10 +1,10 @@
 # vproxy
 
-> Zero-config virtual proxies with TLS, for local development
+> Zero-config virtual host reverse proxies with TLS, for local development
 
-Automatically create and manage hosts files and TLS certificates for any
+Automatically update the hosts file and generate TLS certificates for any
 hostname using a locally-trusted CA (via
-[mkcert](https://github.com/FiloSottile/mkcert/)).
+[mkcert](https://github.com/FiloSottile/mkcert)/[truststore](https://github.com/jittering/truststore)).
 
 ## Installation
 
@@ -17,19 +17,10 @@ brew install vproxy
 
 or manually:
 
-1. Install [mkcert](https://github.com/FiloSottile/mkcert/#installation)
-2. Download a [pre-built binary](https://github.com/jittering/vproxy/releases) or build it from source:
+Download a [pre-built binary](https://github.com/jittering/vproxy/releases) or build it from source:
 
 ```sh
 go get github.com/jittering/vproxy/...
-```
-
-### Initialize mkcert
-
-Create install a new local-CA in your system:
-
-```sh
-mkcert -install
 ```
 
 ## Usage
@@ -51,7 +42,7 @@ If installed via homebrew on macOS, running it as a service is easy:
 sudo brew services start vproxy
 ```
 
-> Note that you must run as root to bind to privileged ports (hence the use of
+> Note that you must run as __root__ to bind to privileged ports (hence the use of
 > sudo above).
 
 Or run it manually:
