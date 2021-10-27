@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cbednarski/hostess/hostess"
+	"github.com/txn2/txeh"
 )
 
 // Vhost represents a single backend service
@@ -102,34 +102,13 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	return vhost, nil
 }
 
-// Map given to host to 127.0.0.1 in system hosts file (usually /etc/hosts)
+// Map given host to 127.0.0.1 in system hosts file (usually /etc/hosts)
 func addToHosts(host string) error {
-	hosts, errs := hostess.LoadHostfile()
-	if len(errs) > 0 {
-		realErrs := []error{}
-		for _, err := range errs {
-			if !strings.Contains(err.Error(), "duplicate") {
-				realErrs = append(realErrs, err)
-			}
-		}
-		if len(realErrs) > 0 {
-			return realErrs[0]
-		}
-	}
-
-	hostname, err := hostess.NewHostname(host, "127.0.0.1", true)
+	hosts, err := txeh.NewHostsDefault()
 	if err != nil {
 		return err
 	}
 
-	err = hosts.Hosts.Add(hostname)
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate") {
-			// ignore duplicate hostname errors (already added previously)
-			return nil
-		}
-		return err
-	}
-
+	hosts.AddHost("127.0.0.1", host)
 	return hosts.Save()
 }
