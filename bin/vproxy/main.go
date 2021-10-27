@@ -61,6 +61,10 @@ func startClient(c *cli.Context) error {
 }
 
 func startDaemon(c *cli.Context) error {
+	// ensure CAROOT set properly
+	if os.Getenv("CAROOT_PATH") != "" {
+		os.Setenv("CAROOT", os.Getenv("CAROOT_PATH"))
+	}
 	err := vproxy.InitTrustStore()
 	if err != nil {
 		return err
@@ -112,6 +116,9 @@ func listClients(c *cli.Context) error {
 }
 
 func printCAROOT(c *cli.Context) error {
+	if c.Bool("default") {
+		os.Unsetenv("CAROOT_PATH")
+	}
 	fmt.Println(vproxy.CARootPath())
 	return nil
 }

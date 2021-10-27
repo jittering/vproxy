@@ -105,11 +105,6 @@ func (d *Daemon) Run() {
 		testListener(d.httpsAddr)
 	}
 
-	// ensure CAROOT set properly
-	if os.Getenv("CAROOT_PATH") != "" {
-		os.Setenv("CAROOT", os.Getenv("CAROOT_PATH"))
-	}
-
 	d.loggedHandler.HandleFunc("/_vproxy/hello", d.hello)
 	d.loggedHandler.HandleFunc("/_vproxy/clients", d.listClients)
 	d.loggedHandler.HandleFunc("/_vproxy", d.registerVhost)

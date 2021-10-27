@@ -121,6 +121,12 @@ func parseFlags() {
 				Usage:  "Print CAROOT path and exit",
 				Action: printCAROOT,
 				Before: loadClientConfig,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "default",
+						Usage: "Get the default CAROOT path (ignoring any config or env vars)",
+					},
+				},
 			},
 			{
 				Name:   "version",
