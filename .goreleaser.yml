@@ -1,5 +1,4 @@
-# This is an example goreleaser.yaml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
+project_name: vproxy
 before:
   hooks:
     - go mod download
@@ -31,12 +30,12 @@ release:
   github:
     owner: jittering
     name: vproxy
+
 brews:
   - tap:
       owner: jittering
       name: homebrew-kegs
 
-    # Name template of the recipe
     # Default to project name
     name: vproxy
 
@@ -98,6 +97,14 @@ brews:
         </dict>
       </plist>
 
+    caveats: |
+      vproxy data is stored in #{var}/vproxy
+
+      A local CA root was created at #{var}/vproxy/caroot;
+        certs will be stored at #{var}/vproxy/cert when generated.
+
+      See vproxy documentation for more info
+
     test: system "#{bin}/vproxy --version"
 
     install: |
@@ -124,17 +131,11 @@ brews:
       #https = 443
 
 
-      # The following paths are set explicitly to facilitate running as root
-
-      # mkcert's CAROOT path
-      # Set to output of `mkcert -CAROOT`
-      caroot_path = "#{`mkcert -CAROOT`.strip}"
+      # CAROOT path
+      caroot_path = "#{var}/vproxy/caroot"
 
       # Path where generated certificates should be stored
-      cert_path = "#{ENV['HOME']}/.vproxy"
-
-      # Path to mkcert program
-      mkcert_path = "#{`which mkcert`.strip}"
+      cert_path = "#{var}/vproxy/cert"
 
       [client]
       # Enable verbose output (for client only)
@@ -147,16 +148,39 @@ brews:
       # project folder
       #bind = ""
       EOF
-
-      # only create if it doesn't already exist
+      str = str.gsub(/^[\t ]+/, "") # trim leading spaces
       conf_file = "#{etc}/vproxy.conf"
-      if !File.exist?(conf_file) then
-        File.open(conf_file, "w") do |f|
-          f.puts str.gsub(/^[\t ]+/, "")
-        end
-      end
 
       # always write new sample file
       File.open(conf_file+".sample", "w") do |f|
-        f.puts str.gsub(/^[\t ]+/, "")
+        f.puts str
+      end
+
+      # only create default conf if it doesn't already exist
+      if !File.exist?(conf_file) then
+        File.open(conf_file, "w") do |f|
+          f.puts str
+        end
+      end
+
+      # setup var dir, if needed
+      if !File.exist?("#{var}/vproxy") then
+
+        # Create/migrate caroot
+        FileUtils.mkdir_p("#{var}/vproxy/caroot", 0755)
+        mkcert_caroot = "#{`#{bin}/vproxy caroot --default`.strip}"
+        if File.exist?(mkcert_caroot) then
+          FileUtils.cp(Dir.glob("#{mkcert_caroot}/*.pem"), "#{var}/vproxy/caroot")
+        else
+          system("vproxy caroot --create")
+        end
+
+        # Create/migrate cert path
+        old_cert_path = "#{ENV['HOME']}/.vproxy"
+        if File.exist?(old_cert_path) then
+          File.rename(old_cert_path, "#{var}/vproxy/cert")
+        else
+          FileUtils.mkdir("#{var}/vproxy/cert", 0755)
+        end
+
       end
