@@ -23,6 +23,14 @@ Download a [pre-built binary](https://github.com/jittering/vproxy/releases) or b
 go get github.com/jittering/vproxy/...
 ```
 
+### Initialize local root CA
+
+Create and install a new local root CA in your system:
+
+```sh
+vproxy caroot --create
+```
+
 ## Usage
 
 vproxy consists of two processes: daemon and client.

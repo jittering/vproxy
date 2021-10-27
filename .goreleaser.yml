@@ -98,10 +98,13 @@ brews:
       </plist>
 
     caveats: |
+      To install your local root CA:
+        $ vproxy caroot --create
+
       vproxy data is stored in #{var}/vproxy
 
-      A local CA root was created at #{var}/vproxy/caroot;
-        certs will be stored at #{var}/vproxy/cert when generated.
+      The local root CA is in #{var}/vproxy/caroot;
+        certs will be stored in #{var}/vproxy/cert when generated.
 
       See vproxy documentation for more info
 
@@ -165,22 +168,26 @@ brews:
 
       # setup var dir, if needed
       if !File.exist?("#{var}/vproxy") then
+        puts ohai_title("creating #{var}/vproxy")
 
         # Create/migrate caroot
-        FileUtils.mkdir_p("#{var}/vproxy/caroot", 0755)
+        mkdir_p("#{var}/vproxy/caroot", mode: 0755)
         mkcert_caroot = "#{`#{bin}/vproxy caroot --default`.strip}"
-        if File.exist?(mkcert_caroot) then
-          FileUtils.cp(Dir.glob("#{mkcert_caroot}/*.pem"), "#{var}/vproxy/caroot")
+        pems = Dir.glob("#{mkcert_caroot}/*.pem")
+        if pems.empty? then
+          puts ohai_title("caroot not found; create with: vaproxy caroot --create")
         else
-          system("vproxy caroot --create")
+          puts ohai_title("migrating caroot")
+          cp(pems, "#{var}/vproxy/caroot")
         end
 
         # Create/migrate cert path
         old_cert_path = "#{ENV['HOME']}/.vproxy"
         if File.exist?(old_cert_path) then
-          File.rename(old_cert_path, "#{var}/vproxy/cert")
+          puts ohai_title("migrating certs")
+          mv(old_cert_path, "#{var}/vproxy/cert", force: true)
         else
-          FileUtils.mkdir("#{var}/vproxy/cert", 0755)
+          puts ohai_title("created cert dir #{var}/vproxy/cert")
+          mkdir("#{var}/vproxy/cert", mode: 0755)
         end
-
       end
