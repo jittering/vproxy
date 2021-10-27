@@ -182,12 +182,19 @@ brews:
         end
 
         # Create/migrate cert path
-        old_cert_path = "#{ENV['HOME']}/.vproxy"
+        puts ohai_title("created cert dir #{var}/vproxy/cert")
+        mkdir_p("#{var}/vproxy/cert", mode: 0755)
         if File.exist?(old_cert_path) then
-          puts ohai_title("migrating certs")
-          mv(old_cert_path, "#{var}/vproxy/cert", force: true)
-        else
-          puts ohai_title("created cert dir #{var}/vproxy/cert")
-          mkdir("#{var}/vproxy/cert", mode: 0755)
+          certs = Dir.glob(old_cert_path+"/*.pem")
+          puts ohai_title("migrating #{certs.size} certs")
+          errs = 0
+          certs.each do |cert|
+            if File.readable?(cert)
+              cp(cert, "#{var}/vproxy/cert")
+            else
+              errs += 1
+            end
+          end
+          onoe("couldn't read #{errs} cert(s)") if errs > 0
         end
       end
