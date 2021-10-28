@@ -6,13 +6,23 @@ Automatically update the hosts file and generate TLS certificates for any
 hostname using a locally-trusted CA (via
 [mkcert](https://github.com/FiloSottile/mkcert)/[truststore](https://github.com/jittering/truststore)).
 
+## Quickstart
+
+```sh
+brew install jittering/kegs/vproxy
+vproxy caroot --create
+sudo brew services start vproxy
+vproxy client --bind hello.local:8888 -- vproxy hello
+```
+
+Now open https://hello.local in your browser!
+
 ## Installation
 
 via homebrew (mac or linux):
 
 ```sh
-brew tap jittering/kegs
-brew install vproxy
+brew install jittering/kegs/vproxy
 ```
 
 or manually:
