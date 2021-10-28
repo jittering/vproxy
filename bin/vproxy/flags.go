@@ -137,6 +137,23 @@ func parseFlags() {
 				},
 			},
 			{
+				Name:   "hello",
+				Usage:  "Start a simple Hello World http service",
+				Action: startHello,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "host",
+						Value: "127.0.0.1",
+						Usage: "Host or IP to bind on",
+					},
+					&cli.IntFlag{
+						Name:  "port",
+						Value: 8888,
+						Usage: "Port to listen on",
+					},
+				},
+			},
+			{
 				Name:   "version",
 				Usage:  "print the version",
 				Action: printVersion,

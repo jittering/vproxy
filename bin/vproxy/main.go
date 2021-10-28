@@ -192,6 +192,10 @@ func uninstallCAROOT() error {
 	return nil
 }
 
+func startHello(c *cli.Context) error {
+	return vproxy.StartHello(c.String("host"), c.Int("port"))
+}
+
 func main() {
 	parseFlags()
 }
