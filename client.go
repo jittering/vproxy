@@ -51,7 +51,12 @@ func startClientBinding(addr string, bind string, cmd *exec.Cmd, wg *sync.WaitGr
 	data := url.Values{}
 	data.Add("binding", bind)
 
-	fmt.Println("[*] registering vhost:", bind)
+	s := strings.Split(bind, ":")
+	if len(s) >= 2 {
+		fmt.Printf("[*] registering vhost: %s -> https://%s\n", bind, s[0])
+	} else {
+		fmt.Println("[*] registering vhost:", bind)
+	}
 	res, err := http.DefaultClient.PostForm(uri, data)
 	if err != nil {
 		stopCommand(cmd)
@@ -69,7 +74,11 @@ func startClientBinding(addr string, bind string, cmd *exec.Cmd, wg *sync.WaitGr
 			fmt.Println("exiting")
 			os.Exit(0)
 		}
-		log.Print(line)
+		if strings.HasPrefix(line, "[*] ") {
+			fmt.Print(line)
+		} else {
+			log.Print(line)
+		}
 	}
 }
 
