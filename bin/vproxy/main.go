@@ -53,7 +53,7 @@ func startClient(c *cli.Context) error {
 	reBind := regexp.MustCompile("^.*?:[0-9]+$")
 	for _, bind := range binds {
 		if bind == "" || !reBind.MatchString(bind) {
-			return fmt.Errorf("error: invalid binding: '%s' (expected format 'app.local.com:7000')", bind)
+			return fmt.Errorf("invalid binding: '%s' (expected format 'app.local.com:7000')", bind)
 		}
 	}
 
