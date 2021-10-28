@@ -71,11 +71,11 @@ func homeConfPath() string {
 }
 
 func findClientConfig(path string) string {
-	return findConfig(path, ".vproxy.conf", homeConfPath(), "/usr/local/etc/vproxy.conf", "/usr/etc/vproxy.conf")
+	return findConfig(path, ".vproxy.conf", homeConfPath(), "/usr/local/etc/vproxy.conf", "/etc/vproxy.conf")
 }
 
 func findDaemonConfig(path string) string {
-	return findConfig(path, homeConfPath(), "/usr/local/etc/vproxy.conf", "/usr/etc/vproxy.conf")
+	return findConfig(path, homeConfPath(), "/usr/local/etc/vproxy.conf", "/etc/vproxy.conf")
 }
 
 func loadConfigFile(path string) (*Config, error) {

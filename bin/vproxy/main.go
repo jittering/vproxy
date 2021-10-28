@@ -196,6 +196,20 @@ func startHello(c *cli.Context) error {
 	return vproxy.StartHello(c.String("host"), c.Int("port"))
 }
 
+func printInfo(c *cli.Context) error {
+	printVersion(c)
+	fmt.Printf("  CAROOT=%s\n", vproxy.CARootPath())
+	fmt.Printf("  CERT_PATH=%s\n", vproxy.CertPath())
+	certs, _ := filepath.Glob(filepath.Join(vproxy.CertPath(), "*-key.pem"))
+	fmt.Printf("\n  Nubmer of installed certs: %d\n", len(certs))
+	fmt.Println("  Certs:")
+	for _, cert := range certs {
+		host := strings.TrimPrefix(strings.TrimSuffix(cert, "-key.pem"), vproxy.CertPath()+string(filepath.Separator))
+		fmt.Printf("    %s\n", host)
+	}
+	return nil
+}
+
 func main() {
 	parseFlags()
 }

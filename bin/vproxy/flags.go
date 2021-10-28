@@ -137,6 +137,12 @@ func parseFlags() {
 				},
 			},
 			{
+				Name:   "info",
+				Usage:  "Print vproxy configuration",
+				Before: loadDaemonConfig,
+				Action: printInfo,
+			},
+			{
 				Name:   "hello",
 				Usage:  "Start a simple Hello World http service",
 				Action: startHello,
@@ -172,6 +178,8 @@ func parseFlags() {
 		args = append(os.Args, "client")
 	} else if !isValidCommand(args[0], app) {
 		args = append([]string{bin, "client"}, args...)
+	} else {
+		args = os.Args
 	}
 
 	err := app.Run(args)
