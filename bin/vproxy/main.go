@@ -210,6 +210,32 @@ func printInfo(c *cli.Context) error {
 	return nil
 }
 
+func genBashCompletion(c *cli.Context) error {
+	comp := `
+#! /bin/bash
+
+_cli_bash_autocomplete() {
+	if [[ "${COMP_WORDS[0]}" != "source" ]]; then
+		local cur opts base
+		COMPREPLY=()
+		cur="${COMP_WORDS[COMP_CWORD]}"
+		if [[ "$cur" == "-"* ]]; then
+			opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} ${cur} --generate-bash-completion | grep -ve '^[a-z]$' )
+		else
+			opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} --generate-bash-completion | grep -ve '^[a-z]$' )
+		fi
+		COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+		return 0
+	fi
+}
+
+complete -o bashdefault -o default -o nospace -F _cli_bash_autocomplete vproxy
+	`
+	fmt.Println(comp)
+	return nil
+
+}
+
 func main() {
 	parseFlags()
 }

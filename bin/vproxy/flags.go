@@ -31,6 +31,8 @@ func parseFlags() {
 		Usage:   "zero-config virtual proxies with tls",
 		Version: version,
 
+		EnableBashCompletion: true,
+
 		CommandNotFound: func(c *cli.Context, cmd string) {
 			fmt.Printf("error: unknown command '%s'\n\n", cmd)
 			cli.ShowAppHelpAndExit(c, 1)
@@ -159,6 +161,19 @@ func parseFlags() {
 						Usage: "Port to listen on",
 					},
 				},
+			},
+			{
+				Name:   "bash_completion",
+				Usage:  "generate bash completion script",
+				Action: genBashCompletion,
+				Description: `To use bash completion, add the following to your .bashrc:
+
+	command -v vproxy >/dev/null 2>&1 && eval "$(vproxy bash_completion)"
+
+or add a file to your bash_completion.d:
+
+	vproxy bash_completion > /etc/bash_completion.d/vproxy
+				`,
 			},
 			{
 				Name:   "version",
