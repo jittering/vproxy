@@ -2,6 +2,7 @@ package vproxy
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -51,6 +52,21 @@ func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// handle it
 	vhost.Handler.ServeHTTP(w, r)
+}
+
+// DumpServers to the given writer
+func (v *VhostMux) DumpServers(w io.Writer) {
+	switch c := len(v.Servers); c {
+	case 0:
+		fmt.Fprintln(w, "0 vhosts")
+	case 1:
+		fmt.Fprintln(w, "1 vhost:")
+	default:
+		fmt.Fprintf(w, "%d vhosts:", c)
+	}
+	for _, v := range v.Servers {
+		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
+	}
 }
 
 // CreateVhostMux config, optionally initialized with a list of bindings

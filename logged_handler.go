@@ -62,10 +62,7 @@ func (lh *LoggedHandler) RemoveVhost(host string) {
 
 // DumpServers to the given writer
 func (lh *LoggedHandler) DumpServers(w io.Writer) {
-	fmt.Fprintf(w, "%d vhosts:\n", len(lh.vhostMux.Servers))
-	for _, v := range lh.vhostMux.Servers {
-		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
-	}
+	lh.vhostMux.DumpServers(w)
 }
 
 // Create multi-certificate TLS config from vhost config
