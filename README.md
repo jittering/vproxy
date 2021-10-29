@@ -12,7 +12,7 @@ hostname using a locally-trusted CA (via
 brew install jittering/kegs/vproxy
 vproxy caroot --create
 sudo brew services start vproxy
-vproxy client hello.local:8888 -- vproxy hello
+vproxy connect hello.local:8888 -- vproxy hello
 ```
 
 Now open https://hello.local in your browser!
@@ -75,10 +75,10 @@ Password:
 
 ### client
 
-Use the client to bind a hostname to a local port:
+Use the connect command to bind a hostname to a local port:
 
 ```sh
-$ vproxy client --bind foo.local.com:5000
+$ vproxy connect --bind foo.local.com:5000
 [*] registering vhost: foo.local.com:5000
 ```
 
@@ -91,7 +91,7 @@ The daemon will automatically:
 You can even run the underlying service with one command, for ease of use:
 
 ```sh
-$ vproxy client --bind foo.local.com:5000 -- flask run
+$ vproxy connect --bind foo.local.com:5000 -- flask run
 [*] running command: /usr/local/bin/flask run
 [*] registering vhost: foo.local.com:5000
  * Serving Flask app "app/main.py"
