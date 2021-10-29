@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -25,6 +24,8 @@ var (
 var listenDefaultAddr = "127.0.0.1"
 var listenAnyIP = "0.0.0.0"
 
+var reBinding = regexp.MustCompile("^.*?:[0-9]+$")
+
 func verbose(c *cli.Context, a ...interface{}) {
 	if c.IsSet("verbose") {
 		fmt.Fprintf(os.Stderr, "[+] "+a[0].(string)+"\n", a[1:]...)
@@ -39,26 +40,42 @@ func printVersion(c *cli.Context) error {
 func startClient(c *cli.Context) error {
 	host := c.String("host")
 	httpPort := c.Int("http")
+
+	// collect and validate binds
+	args := c.Args().Slice()
 	binds := c.StringSlice("bind")
 	if len(binds) == 0 {
-		return fmt.Errorf("must bind at least one hostname")
+		// see if one was passed as the first arg
+		if c.Args().Present() {
+			if b := c.Args().First(); b != "" && validateBinding(b) == nil {
+				binds = append(binds, b)
+			} else {
+				return fmt.Errorf("must bind at least one hostname")
+			}
+			args = c.Args().Tail()
+		} else {
+			return fmt.Errorf("must bind at least one hostname")
+		}
+	}
+	for _, bind := range binds {
+		if err := validateBinding(bind); err != nil {
+			return err
+		}
 	}
 
 	addr := fmt.Sprintf("%s:%d", host, httpPort)
 	if !vproxy.IsDaemonRunning(addr) {
-		return errors.New("daemon not running on localhost")
+		return fmt.Errorf("daemon not running on localhost")
 	}
 
-	// check all binds
-	reBind := regexp.MustCompile("^.*?:[0-9]+$")
-	for _, bind := range binds {
-		if bind == "" || !reBind.MatchString(bind) {
-			return fmt.Errorf("invalid binding: '%s' (expected format 'app.local.com:7000')", bind)
-		}
-	}
+	vproxy.StartClientMode(addr, binds, args)
+	return nil
+}
 
-	verbose(c, "Found existing daemon, starting in client mode")
-	vproxy.StartClientMode(addr, binds, c.Args().Slice())
+func validateBinding(bind string) error {
+	if bind == "" || !reBinding.MatchString(bind) {
+		return fmt.Errorf("invalid binding: '%s' (expected format 'host:port', e.g., 'app.local.com:7000')", bind)
+	}
 	return nil
 }
 

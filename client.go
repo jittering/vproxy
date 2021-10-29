@@ -15,6 +15,11 @@ import (
 )
 
 func StartClientMode(addr string, binds []string, args []string) {
+	if len(binds) == 0 {
+		fmt.Println("error: must bind at least one hostname")
+		os.Exit(1)
+	}
+
 	// run command, if given
 	var cmd *exec.Cmd
 	if len(args) > 0 {
