@@ -23,9 +23,17 @@ func runCommand(args []string) *exec.Cmd {
 }
 
 func stopCommand(cmd *exec.Cmd) {
+
 	if cmd == nil {
 		return
 	}
+
+	err := syscall.Kill(-cmd.Process.Pid, syscall.Signal(0))
+	if err != nil && err.Error() == "operation not permitted" {
+		// process no longer running, nothing to do here
+		return
+	}
+
 	fmt.Println("[*] stopping process", cmd.Process.Pid)
 	e := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
 	if e != nil {
