@@ -1,5 +1,6 @@
 
-build: build-linux build-mac
+build: clean
+	goreleaser build --snapshot --rm-dist
 
 build-linux:
 	GOOS=linux go build -o vproxy-linux-x64 ./bin/vproxy/
