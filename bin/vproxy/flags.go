@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 )
@@ -171,32 +172,9 @@ func parseFlags() {
 		printVersion(c)
 	}
 
-	// default to 'client' command when none given
-	bin := os.Args[0]
-	args := os.Args[1:]
-	if len(args) == 0 {
-		args = append(os.Args, "client")
-	} else if !isValidCommand(args[0], app) {
-		args = append([]string{bin, "client"}, args...)
-	} else {
-		args = os.Args
-	}
-
-	err := app.Run(args)
-	if err != nil {
+	err := app.Run(os.Args)
+	if err != nil && !strings.Contains(err.Error(), "flag provided") {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)
 	}
-}
-
-// search command names and aliases for the given string
-func isValidCommand(cmd string, app *cli.App) bool {
-	for _, command := range app.Commands {
-		for _, c := range command.Names() {
-			if c == cmd {
-				return true
-			}
-		}
-	}
-	return false
 }
