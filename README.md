@@ -12,7 +12,7 @@ hostname using a locally-trusted CA (via
 brew install jittering/kegs/vproxy
 vproxy caroot --create
 sudo brew services start vproxy
-vproxy client --bind hello.local:8888 -- vproxy hello
+vproxy client hello.local:8888 -- vproxy hello
 ```
 
 Now open https://hello.local in your browser!

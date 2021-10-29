@@ -42,7 +42,7 @@ func parseFlags() {
 vproxy daemon
 
 # In terminal two:
-vproxy connect --bind hello.local:8888 -- vproxy hello
+vproxy connect hello.local:8888 -- vproxy hello
 
 		See docs for more https://github.com/jittering/vproxy
 		`,
