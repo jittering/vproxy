@@ -53,6 +53,10 @@ func startClient(c *cli.Context) error {
 				return fmt.Errorf("must bind at least one hostname")
 			}
 			args = c.Args().Tail()
+			if len(args) > 0 && args[0] == "--" {
+				args = args[1:]
+			}
+
 		} else {
 			return fmt.Errorf("must bind at least one hostname")
 		}
