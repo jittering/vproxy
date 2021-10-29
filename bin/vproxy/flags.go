@@ -23,15 +23,32 @@ func parseFlags() {
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:    "version",
 		Aliases: []string{"V"},
-		Usage:   "print the version",
+		Usage:   "Print the version",
 	}
+	cli.HelpFlag = &cli.BoolFlag{
+		Name:    "help",
+		Aliases: []string{"h"},
+		Usage:   "Show help (add -v to show all)",
+	}
+
+	hideFlags := shouldHideFlags()
 
 	app := &cli.App{
 		Name:    "vproxy",
-		Usage:   "zero-config virtual proxies with tls",
+		Usage:   "Zero-config virtual host reverse proxies with TLS, for local development",
 		Version: version,
 
+		Description: `# In terminal one (or via service launcher):
+vproxy daemon
+
+# In terminal two:
+vproxy connect --bind hello.local:8888 -- vproxy hello
+
+		See docs for more https://github.com/jittering/vproxy
+		`,
+
 		EnableBashCompletion: true,
+		HideHelpCommand:      hideFlags,
 
 		CommandNotFound: func(c *cli.Context, cmd string) {
 			fmt.Printf("error: unknown command '%s'\n\n", cmd)
@@ -55,7 +72,7 @@ func parseFlags() {
 			{
 				Name:    "daemon",
 				Aliases: []string{"server", "d", "s"},
-				Usage:   "run host daemon",
+				Usage:   "Run host daemon",
 				Action:  startDaemon,
 				Before:  loadDaemonConfig,
 				Flags: []cli.Flag{
@@ -78,9 +95,9 @@ func parseFlags() {
 				},
 			},
 			{
-				Name:    "client",
-				Aliases: []string{"c"},
-				Usage:   "run in client mode",
+				Name:    "connect",
+				Aliases: []string{"client", "c", "add"},
+				Usage:   "Add a new vhost",
 				Action:  startClient,
 				Before:  loadClientConfig,
 				Flags: []cli.Flag{
@@ -103,7 +120,7 @@ func parseFlags() {
 			{
 				Name:    "list",
 				Aliases: []string{"l"},
-				Usage:   "list vhosts",
+				Usage:   "List current vhosts",
 				Action:  listClients,
 				Before:  loadClientConfig,
 				Flags: []cli.Flag{
@@ -149,6 +166,7 @@ func parseFlags() {
 				Name:   "hello",
 				Usage:  "Start a simple Hello World http service",
 				Action: startHello,
+				Hidden: hideFlags,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "host",
@@ -164,7 +182,7 @@ func parseFlags() {
 			},
 			{
 				Name:   "bash_completion",
-				Usage:  "generate bash completion script",
+				Usage:  "Generate bash completion script",
 				Action: genBashCompletion,
 				Description: `To use bash completion, add the following to your .bashrc:
 
@@ -177,8 +195,9 @@ or add a file to your bash_completion.d:
 			},
 			{
 				Name:   "version",
-				Usage:  "print the version",
+				Usage:  "Print the version",
 				Action: printVersion,
+				Hidden: hideFlags,
 			},
 		},
 	}
@@ -192,4 +211,14 @@ or add a file to your bash_completion.d:
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)
 	}
+}
+
+// Hide flags unless verbose flag set
+func shouldHideFlags() bool {
+	for _, f := range os.Args {
+		if f == "--verbose" || f == "-v" {
+			return false
+		}
+	}
+	return true
 }
