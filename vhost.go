@@ -146,8 +146,23 @@ func (v *Vhost) RemoveLogListener(logChan LogListener) {
 	v.listeners = v.listeners[:index]
 }
 
-func (v *Vhost) Close() {
+func (v *Vhost) BufferAsString() string {
+	if v.logRing.Len() == 0 {
+		return ""
+	}
+	buff := ""
+	for i := 0; i < v.logRing.Len(); i++ {
+		s := v.logRing.At(i).(string)
+		if s != "" {
+			buff += s + "\n"
+		}
+	}
+	return buff
+}
 
+func (v *Vhost) Close() {
+	close(v.logChan)
+	v.logRing.Clear()
 }
 
 func (v *Vhost) populateLogBuffer() {

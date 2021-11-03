@@ -218,17 +218,9 @@ func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx
 	logChan := vhost.NewLogListener()
 
 	// read existing logs first
-	if vhost.logRing.Len() > 0 {
-		buff := ""
-		for i := 0; i < vhost.logRing.Len(); i++ {
-			s := vhost.logRing.At(i).(string)
-			if s != "" {
-				buff += s + "\n"
-			}
-		}
-		if buff != "" {
-			fmt.Fprint(w, buff)
-		}
+	buff := vhost.BufferAsString()
+	if buff != "" {
+		fmt.Fprint(w, buff)
 	}
 
 	// Listen to connection close and un-register logChan
@@ -252,6 +244,13 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 		fmt.Printf("    %s\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
+	}
+
+	// remove any existing vhost
+	if v := d.loggedHandler.GetVhost(vhost.Host); v != nil {
+		fmt.Printf("[*] removing existing vhost: %s -> %d\n", v.Host, v.Port)
+		v.Close()
+		d.loggedHandler.RemoveVhost(vhost.Host)
 	}
 
 	fmt.Printf("[*] registering new vhost: %s -> %d\n", vhost.Host, vhost.Port)
