@@ -84,12 +84,12 @@ func (c *Client) addBinding(bind string, detach bool) {
 	if detach {
 		c.wg.Done()
 	} else {
-		c.Attach(s[0])
+		c.Tail(s[0], true)
 	}
 	res.Body.Close()
 }
 
-func (c *Client) Attach(hostname string) {
+func (c *Client) Tail(hostname string, follow bool) {
 	data := url.Values{}
 	data.Add("host", hostname)
 	res, err := http.DefaultClient.PostForm(c.uri("/clients/stream"), data)
@@ -98,14 +98,17 @@ func (c *Client) Attach(hostname string) {
 		log.Fatalf("error registering client: %s\n", err)
 	}
 	fmt.Printf("[*] streaming logs for %s\n", hostname)
-	streamLogs(res)
+	streamLogs(res, follow)
 }
 
-func streamLogs(res *http.Response) {
+func streamLogs(res *http.Response, follow bool) {
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
 	for {
 		line, err := r.ReadString('\n')
+		if line == "---\n" && !follow {
+			os.Exit(0)
+		}
 		if err != nil {
 			if line != "" && strings.Contains(line, "error") {
 				fmt.Println(line)

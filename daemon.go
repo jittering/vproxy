@@ -221,6 +221,7 @@ func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx
 	buff := vhost.BufferAsString()
 	if buff != "" {
 		fmt.Fprint(w, buff)
+		fmt.Fprintln(w, "---")
 	}
 
 	// Listen to connection close and un-register logChan

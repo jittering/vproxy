@@ -87,7 +87,7 @@ func tailLogs(c *cli.Context) error {
 
 	hostname := c.Args().First()
 	client := createClient(c)
-	client.Attach(hostname)
+	client.Tail(hostname, !c.Bool("no-follow"))
 
 	return nil
 }
