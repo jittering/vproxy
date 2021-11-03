@@ -14,8 +14,9 @@ import (
 
 var defaultTLSHost = "vproxy.local"
 
-// LoggedHandler is an http.Server implementation which multiplexes requests to the
-// vhost backends (via a handler) and logs each request.
+// LoggedHandler is an extension of http.ServeMux which multiplexes requests to
+// the vhost backends (via a handler) and logs each request.
+// TODO: replace ServeMux with a proper router (chi?)
 type LoggedHandler struct {
 	*http.ServeMux
 	VhostLogListeners map[string]chan string

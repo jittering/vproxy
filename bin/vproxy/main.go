@@ -67,12 +67,12 @@ func startClient(c *cli.Context) error {
 		}
 	}
 
-	addr := fmt.Sprintf("%s:%d", host, httpPort)
-	if !vproxy.IsDaemonRunning(addr) {
+	client := &vproxy.Client{Addr: fmt.Sprintf("%s:%d", host, httpPort)}
+	if !client.IsDaemonRunning() {
 		return fmt.Errorf("daemon not running on localhost")
 	}
 
-	vproxy.StartClientMode(addr, binds, args)
+	client.AddBindings(binds, c.Bool("detach"), args)
 	return nil
 }
 

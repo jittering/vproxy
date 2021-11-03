@@ -115,6 +115,10 @@ vproxy connect hello.local:8888 -- vproxy hello
 						Name:  "bind",
 						Usage: "Bind hostname to local port (e.g., app.local.com:7000)",
 					},
+					&cli.BoolFlag{
+						Name:  "detach",
+						Usage: "Do not stream logs after binding",
+					},
 				},
 			},
 			{

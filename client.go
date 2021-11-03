@@ -14,45 +14,56 @@ import (
 	"sync"
 )
 
-func StartClientMode(addr string, binds []string, args []string) {
+type Client struct {
+	Addr string
+	cmd  *exec.Cmd
+	wg   *sync.WaitGroup
+}
+
+func (c *Client) uri(path string) string {
+	return fmt.Sprintf("http://%s/_vproxy%s", c.Addr, path)
+}
+
+func (c *Client) AddBindings(binds []string, detach bool, args []string) {
 	if len(binds) == 0 {
 		fmt.Println("error: must bind at least one hostname")
 		os.Exit(1)
 	}
 
-	// run command, if given
-	var cmd *exec.Cmd
-	if len(args) > 0 {
-		cmd = runCommand(args)
-
-		// trap signal for later cleanup
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		go func() {
-			// catch ^c, cleanup
-			s := <-c
-			if s == nil {
-				return
-			}
-			fmt.Println("[*] caught signal:", s)
-			stopCommand(cmd)
-			os.Exit(0)
-		}()
-	}
-
-	wg := &sync.WaitGroup{}
+	c.wg = &sync.WaitGroup{}
 	for _, bind := range binds {
-		wg.Add(1)
-		go startClientBinding(addr, bind, cmd, wg)
-		wg.Wait()
+		c.wg.Add(1)
+		go c.addBinding(bind, detach)
+		c.wg.Wait()
 	}
 
-	wg.Add(1)
-	wg.Wait()
+	c.wg.Add(1)
+	c.wg.Wait()
 }
 
-func startClientBinding(addr string, bind string, cmd *exec.Cmd, wg *sync.WaitGroup) {
-	uri := fmt.Sprintf("http://%s/_vproxy", addr)
+func (c *Client) runCommand(args []string) {
+	// run command, if given
+	if len(args) == 0 {
+		return
+	}
+	c.cmd = runCommand(args)
+
+	// trap signal for later cleanup
+	cs := make(chan os.Signal, 1)
+	signal.Notify(cs, os.Interrupt)
+	go func() {
+		// catch ^c, cleanup
+		s := <-cs
+		if s == nil {
+			return
+		}
+		fmt.Println("[*] caught signal:", s)
+		stopCommand(c.cmd)
+		os.Exit(0)
+	}()
+}
+
+func (c *Client) addBinding(bind string, detach bool) {
 	data := url.Values{}
 	data.Add("binding", bind)
 
@@ -62,20 +73,31 @@ func startClientBinding(addr string, bind string, cmd *exec.Cmd, wg *sync.WaitGr
 	} else {
 		fmt.Println("[*] registering vhost:", bind)
 	}
-	res, err := http.DefaultClient.PostForm(uri, data)
+	res, err := http.DefaultClient.PostForm(c.uri("/clients/add"), data)
 	if err != nil {
-		stopCommand(cmd)
+		stopCommand(c.cmd)
 		log.Fatalf("error registering client: %s\n", err)
 	}
 
-	wg.Done()
+	c.wg.Done()
+	if detach {
+		res.Body.Close()
+	} else {
+		streamLogs(res)
+	}
+}
+
+func attach(addr string, bind string) {
+
+}
+
+func streamLogs(res *http.Response) {
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
 			fmt.Printf("error reading from daemon: %s\n", err)
-			stopCommand(cmd)
 			fmt.Println("exiting")
 			os.Exit(0)
 		}
@@ -88,8 +110,8 @@ func startClientBinding(addr string, bind string, cmd *exec.Cmd, wg *sync.WaitGr
 }
 
 // IsDaemonRunning tries to check if a vproxy daemon is already running on the given addr
-func IsDaemonRunning(addr string) bool {
-	res, err := http.DefaultClient.Get(fmt.Sprintf("http://%s/_vproxy/hello", addr))
+func (c *Client) IsDaemonRunning() bool {
+	res, err := http.DefaultClient.Get(c.uri("/hello"))
 	if err != nil || res.StatusCode != 200 {
 		return false
 	}
