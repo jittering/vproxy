@@ -122,6 +122,30 @@ vproxy connect hello.local:8888 -- vproxy hello
 				},
 			},
 			{
+				Name:      "tail",
+				Aliases:   []string{"stream", "attach"},
+				Usage:     "Stream logs for given vhost",
+				Action:    tailLogs,
+				Before:    loadClientConfig,
+				UsageText: `vproxy tail [command options] <hostname>`,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "host",
+						Value: "127.0.0.1",
+						Usage: "Daemon host IP",
+					},
+					&cli.IntFlag{
+						Name:  "http",
+						Value: 80,
+						Usage: "Daemon HTTP port",
+					},
+					&cli.BoolFlag{
+						Name:  "no-follow",
+						Usage: "Get the most recent logs and exit",
+					},
+				},
+			},
+			{
 				Name:    "list",
 				Aliases: []string{"l"},
 				Usage:   "List current vhosts",

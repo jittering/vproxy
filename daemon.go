@@ -107,7 +107,8 @@ func (d *Daemon) Run() {
 
 	d.loggedHandler.HandleFunc("/_vproxy/hello", d.hello)
 	d.loggedHandler.HandleFunc("/_vproxy/clients", d.listClients)
-	d.loggedHandler.HandleFunc("/_vproxy", d.registerVhost)
+	d.loggedHandler.HandleFunc("/_vproxy/clients/add", d.registerVhost)
+	d.loggedHandler.HandleFunc("/_vproxy/clients/stream", d.streamLogs)
 	d.wg.Add(1) // ensure we don't exit immediately
 
 	if d.enableHTTP() {
@@ -145,10 +146,7 @@ func (d *Daemon) startHTTP() {
 	defer null.Close()
 
 	server := &http.Server{Handler: d.loggedHandler, ErrorLog: nullLogger}
-	err = server.Serve(d.httpListener)
-	// if err != nil {
-	// 	fmt.Printf("[*] error: http server exited with error: %s\n", err)
-	// }
+	server.Serve(d.httpListener)
 	d.wg.Done()
 }
 
@@ -170,10 +168,7 @@ func (d *Daemon) startTLS() {
 		// ErrorLog:  nullLogger,
 	}
 
-	err = server.ServeTLS(d.httpsListener, "", "")
-	// if err != nil {
-	// 	fmt.Printf("[*] error: tls server exited with error: %s\n", err)
-	// }
+	server.ServeTLS(d.httpsListener, "", "")
 	d.wg.Done()
 }
 
@@ -185,8 +180,22 @@ func (d *Daemon) restartTLS() {
 	go d.startTLS()
 }
 
-// registerVhost handler
+// registerVhost handler creates and starts a new vhost reverse proxy
 func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
+	binding := r.PostFormValue("binding")
+	d.addVhost(binding, w)
+
+	// defer func() {
+	// 	// Remove this client when this handler exits
+	// 	fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
+	// 	d.loggedHandler.RemoveVhost(vhost.Host)
+	// 	d.restartTLS()
+	// }()
+}
+
+// streamLogs for a given hostname back to the caller. Runs forever until client
+// disconnects.
+func (d *Daemon) streamLogs(w http.ResponseWriter, r *http.Request) {
 	rw := w.(*LogRecord).ResponseWriter
 	flusher, ok := rw.(http.Flusher)
 	if !ok {
@@ -194,18 +203,12 @@ func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	binding := r.PostFormValue("binding")
-	logChan, vhost := d.addVhost(binding, w)
-	if vhost == nil {
+	hostname := r.PostFormValue("host")
+	logChan := d.loggedHandler.VhostLogListeners[hostname]
+	if logChan == nil {
+		fmt.Fprintf(w, "[*] error: host '%s' not found", hostname)
 		return
 	}
-
-	defer func() {
-		// Remove this client when this handler exits
-		fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
-		d.loggedHandler.RemoveVhost(vhost.Host)
-		d.restartTLS()
-	}()
 
 	// runs forever until connection closes
 	d.relayLogsUntilClose(flusher, logChan, rw, w)

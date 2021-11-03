@@ -30,6 +30,8 @@ func (c *Client) AddBindings(binds []string, detach bool, args []string) {
 		os.Exit(1)
 	}
 
+	c.runCommand(args)
+
 	c.wg = &sync.WaitGroup{}
 	for _, bind := range binds {
 		c.wg.Add(1)
@@ -83,12 +85,20 @@ func (c *Client) addBinding(bind string, detach bool) {
 	if detach {
 		res.Body.Close()
 	} else {
-		streamLogs(res)
+		c.Attach(s[0])
 	}
 }
 
-func attach(addr string, bind string) {
-
+func (c *Client) Attach(hostname string) {
+	data := url.Values{}
+	data.Add("host", hostname)
+	res, err := http.DefaultClient.PostForm(c.uri("/clients/stream"), data)
+	if err != nil {
+		stopCommand(c.cmd)
+		log.Fatalf("error registering client: %s\n", err)
+	}
+	fmt.Printf("[*] streaming logs for %s\n", hostname)
+	streamLogs(res)
 }
 
 func streamLogs(res *http.Response) {
@@ -97,8 +107,15 @@ func streamLogs(res *http.Response) {
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			fmt.Printf("error reading from daemon: %s\n", err)
-			fmt.Println("exiting")
+			if line != "" && strings.Contains(line, "error") {
+				fmt.Println(line)
+				os.Exit(1)
+			} else if err.Error() == "EOF" {
+				fmt.Println("[*] daemon connection closed")
+			} else {
+				fmt.Printf("error reading from daemon: %s\n", err)
+				fmt.Println("exiting")
+			}
 			os.Exit(0)
 		}
 		if strings.HasPrefix(line, "[*] ") {

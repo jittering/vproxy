@@ -38,8 +38,6 @@ func printVersion(c *cli.Context) error {
 }
 
 func startClient(c *cli.Context) error {
-	host := c.String("host")
-	httpPort := c.Int("http")
 
 	// collect and validate binds
 	args := c.Args().Slice()
@@ -67,12 +65,30 @@ func startClient(c *cli.Context) error {
 		}
 	}
 
-	client := &vproxy.Client{Addr: fmt.Sprintf("%s:%d", host, httpPort)}
+	client := createClient(c)
 	if !client.IsDaemonRunning() {
 		return fmt.Errorf("daemon not running on localhost")
 	}
 
 	client.AddBindings(binds, c.Bool("detach"), args)
+	return nil
+}
+
+func createClient(c *cli.Context) *vproxy.Client {
+	host := c.String("host")
+	httpPort := c.Int("http")
+	return &vproxy.Client{Addr: fmt.Sprintf("%s:%d", host, httpPort)}
+}
+
+func tailLogs(c *cli.Context) error {
+	if !c.Args().Present() {
+		return fmt.Errorf("missing hostname")
+	}
+
+	hostname := c.Args().First()
+	client := createClient(c)
+	client.Attach(hostname)
+
 	return nil
 }
 
