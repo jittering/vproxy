@@ -1,6 +1,7 @@
 package vproxy
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -211,15 +212,14 @@ func (d *Daemon) streamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// runs forever until connection closes
-	d.relayLogsUntilClose(flusher, logChan, rw, w)
+	d.relayLogsUntilClose(flusher, logChan, w, r.Context())
 }
 
-func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, rw http.ResponseWriter, w http.ResponseWriter) {
+func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, w http.ResponseWriter, reqCtx context.Context) {
 	// Listen to connection close and un-register logChan
-	notify := rw.(http.CloseNotifier).CloseNotify()
 	for {
 		select {
-		case <-notify:
+		case <-reqCtx.Done():
 			return
 		case line := <-logChan:
 			fmt.Fprintln(w, line)
