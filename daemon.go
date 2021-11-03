@@ -197,13 +197,6 @@ func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 // streamLogs for a given hostname back to the caller. Runs forever until client
 // disconnects.
 func (d *Daemon) streamLogs(w http.ResponseWriter, r *http.Request) {
-	rw := w.(*LogRecord).ResponseWriter
-	flusher, ok := rw.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-		return
-	}
-
 	hostname := r.PostFormValue("host")
 	logChan := d.loggedHandler.VhostLogListeners[hostname]
 	if logChan == nil {
@@ -212,10 +205,16 @@ func (d *Daemon) streamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// runs forever until connection closes
-	d.relayLogsUntilClose(flusher, logChan, w, r.Context())
+	d.relayLogsUntilClose(logChan, w, r.Context())
 }
 
-func (d *Daemon) relayLogsUntilClose(flusher http.Flusher, logChan chan string, w http.ResponseWriter, reqCtx context.Context) {
+func (d *Daemon) relayLogsUntilClose(logChan chan string, w http.ResponseWriter, reqCtx context.Context) {
+	flusher, ok := w.(*LogRecord).ResponseWriter.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+
 	// Listen to connection close and un-register logChan
 	for {
 		select {
