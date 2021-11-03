@@ -198,14 +198,14 @@ func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 // disconnects.
 func (d *Daemon) streamLogs(w http.ResponseWriter, r *http.Request) {
 	hostname := r.PostFormValue("host")
-	logChan := d.loggedHandler.VhostLogListeners[hostname]
-	if logChan == nil {
+	vhost := d.loggedHandler.GetVhost(hostname)
+	if vhost == nil {
 		fmt.Fprintf(w, "[*] error: host '%s' not found", hostname)
 		return
 	}
 
 	// runs forever until connection closes
-	d.relayLogsUntilClose(logChan, w, r.Context())
+	d.relayLogsUntilClose(vhost.LogChan, w, r.Context())
 }
 
 func (d *Daemon) relayLogsUntilClose(logChan chan string, w http.ResponseWriter, reqCtx context.Context) {
@@ -228,13 +228,13 @@ func (d *Daemon) relayLogsUntilClose(logChan chan string, w http.ResponseWriter,
 }
 
 // addVhost for the given binding to the LoggedHandler
-func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *Vhost) {
+func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
 		fmt.Printf("[*] warning: failed to register new vhost `%s`\n", binding)
 		fmt.Printf("    %s\n", err)
 		w.WriteHeader(http.StatusBadRequest)
-		return nil, nil
+		return nil
 	}
 
 	fmt.Printf("[*] registering new vhost: %s -> %d\n", vhost.Host, vhost.Port)
@@ -245,20 +245,19 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) (chan string, *
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	logChan := make(chan string, 10)
-	d.loggedHandler.AddVhost(vhost, logChan)
+	d.loggedHandler.AddVhost(vhost)
 	d.restartTLS()
 
 	err = addToHosts(vhost.Host)
 	if err != nil {
 		msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file: %s\n", vhost.Host, err)
 		fmt.Println(msg)
-		logChan <- msg
+		vhost.LogChan <- msg
 	}
 
-	logChan <- fmt.Sprintf("[*] added vhost: %s", binding)
+	vhost.LogChan <- fmt.Sprintf("[*] added vhost: %s", binding)
 
-	return logChan, vhost
+	return vhost
 }
 
 func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {

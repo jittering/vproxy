@@ -22,6 +22,8 @@ type Vhost struct {
 	Handler http.Handler
 	Cert    string // TLS Certificate
 	Key     string // TLS Private Key
+
+	LogChan chan string
 }
 
 // VhostMux is an http.Handler whose ServeHTTP forwards the request to
@@ -106,6 +108,7 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 
 	vhost := &Vhost{
 		Host: hostname, ServiceHost: targetHost, Port: targetPort, Handler: proxy,
+		LogChan: make(chan string, 10),
 	}
 
 	if useTLS {

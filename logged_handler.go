@@ -19,8 +19,7 @@ var defaultTLSHost = "vproxy.local"
 // TODO: replace ServeMux with a proper router (chi?)
 type LoggedHandler struct {
 	*http.ServeMux
-	VhostLogListeners map[string]chan string
-	vhostMux          *VhostMux
+	vhostMux *VhostMux
 
 	defaultHost string
 	defaultCert string
@@ -30,9 +29,8 @@ type LoggedHandler struct {
 // NewLoggedHandler wraps the given handler with a request/response logger
 func NewLoggedHandler(vm *VhostMux) *LoggedHandler {
 	lh := &LoggedHandler{
-		ServeMux:          http.NewServeMux(),
-		VhostLogListeners: make(map[string]chan string),
-		vhostMux:          vm,
+		ServeMux: http.NewServeMux(),
+		vhostMux: vm,
 	}
 
 	lh.defaultHost = defaultTLSHost
@@ -51,13 +49,15 @@ func (lh *LoggedHandler) createDefaultCert() {
 	}
 }
 
-func (lh *LoggedHandler) AddVhost(vhost *Vhost, listener chan string) {
-	lh.VhostLogListeners[vhost.Host] = listener
+func (lh *LoggedHandler) AddVhost(vhost *Vhost) {
 	lh.vhostMux.Servers[vhost.Host] = vhost
 }
 
+func (lh *LoggedHandler) GetVhost(host string) *Vhost {
+	return lh.vhostMux.Servers[host]
+}
+
 func (lh *LoggedHandler) RemoveVhost(host string) {
-	delete(lh.VhostLogListeners, host)
 	delete(lh.vhostMux.Servers, host)
 }
 
@@ -104,10 +104,14 @@ func (lh *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host := getHostName(r.Host)
 
 	l := fmt.Sprintf("%s [%s] %s [ %d ] %s %d %s", r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
-	log.Println(l)
+	lh.pushLog(host, l)
+}
 
-	if listener, ok := lh.VhostLogListeners[host]; ok {
-		listener <- l
+func (lh *LoggedHandler) pushLog(host string, msg string) {
+	log.Println(msg)
+
+	if vhost := lh.GetVhost(host); vhost != nil {
+		vhost.LogChan <- msg
 	}
 }
 
