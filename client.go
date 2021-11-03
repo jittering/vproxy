@@ -39,7 +39,7 @@ func (c *Client) AddBindings(binds []string, detach bool, args []string) {
 		c.wg.Wait()
 	}
 
-	c.wg.Add(1)
+	// c.wg.Add(1)
 	c.wg.Wait()
 }
 
@@ -81,12 +81,12 @@ func (c *Client) addBinding(bind string, detach bool) {
 		log.Fatalf("error registering client: %s\n", err)
 	}
 
-	c.wg.Done()
 	if detach {
-		res.Body.Close()
+		c.wg.Done()
 	} else {
 		c.Attach(s[0])
 	}
+	res.Body.Close()
 }
 
 func (c *Client) Attach(hostname string) {
@@ -118,11 +118,8 @@ func streamLogs(res *http.Response) {
 			}
 			os.Exit(0)
 		}
-		if strings.HasPrefix(line, "[*] ") {
-			fmt.Print(line)
-		} else {
-			log.Print(line)
-		}
+
+		fmt.Print(line)
 	}
 }
 

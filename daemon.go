@@ -205,20 +205,37 @@ func (d *Daemon) streamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// runs forever until connection closes
-	d.relayLogsUntilClose(vhost.LogChan, w, r.Context())
+	d.relayLogsUntilClose(vhost, w, r.Context())
 }
 
-func (d *Daemon) relayLogsUntilClose(logChan chan string, w http.ResponseWriter, reqCtx context.Context) {
+func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx context.Context) {
 	flusher, ok := w.(*LogRecord).ResponseWriter.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
+	logChan := vhost.NewLogListener()
+
+	// read existing logs first
+	if vhost.logRing.Len() > 0 {
+		buff := ""
+		for i := 0; i < vhost.logRing.Len(); i++ {
+			s := vhost.logRing.At(i).(string)
+			if s != "" {
+				buff += s + "\n"
+			}
+		}
+		if buff != "" {
+			fmt.Fprint(w, buff)
+		}
+	}
+
 	// Listen to connection close and un-register logChan
 	for {
 		select {
 		case <-reqCtx.Done():
+			vhost.RemoveLogListener(logChan)
 			return
 		case line := <-logChan:
 			fmt.Fprintln(w, line)
@@ -252,10 +269,10 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 	if err != nil {
 		msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file: %s\n", vhost.Host, err)
 		fmt.Println(msg)
-		vhost.LogChan <- msg
+		fmt.Fprintln(w, msg)
 	}
 
-	vhost.LogChan <- fmt.Sprintf("[*] added vhost: %s", binding)
+	fmt.Fprintf(w, "[*] added vhost: %s", binding)
 
 	return vhost
 }

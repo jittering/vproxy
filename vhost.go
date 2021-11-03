@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gammazero/deque"
 	"github.com/txn2/txeh"
 )
 
@@ -23,8 +24,12 @@ type Vhost struct {
 	Cert    string // TLS Certificate
 	Key     string // TLS Private Key
 
-	LogChan chan string
+	logRing   *deque.Deque
+	logChan   LogListener
+	listeners []LogListener
 }
+
+type LogListener chan string
 
 // VhostMux is an http.Handler whose ServeHTTP forwards the request to
 // backend Servers according to the incoming request URL
@@ -108,8 +113,11 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 
 	vhost := &Vhost{
 		Host: hostname, ServiceHost: targetHost, Port: targetPort, Handler: proxy,
-		LogChan: make(chan string, 10),
+		logRing: deque.New(10, 16),
+		logChan: make(LogListener, 10),
 	}
+
+	go vhost.populateLogBuffer()
 
 	if useTLS {
 		vhost.Cert, vhost.Key, err = MakeCert(hostname)
@@ -119,6 +127,39 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	}
 
 	return vhost, nil
+}
+
+func (v *Vhost) NewLogListener() LogListener {
+	logChan := make(LogListener, 100)
+	v.listeners = append(v.listeners, logChan)
+	return logChan
+}
+
+func (v *Vhost) RemoveLogListener(logChan LogListener) {
+	index := 0
+	for _, i := range v.listeners {
+		if i != logChan {
+			v.listeners[index] = i
+			index++
+		}
+	}
+	v.listeners = v.listeners[:index]
+}
+
+func (v *Vhost) Close() {
+
+}
+
+func (v *Vhost) populateLogBuffer() {
+	for {
+		line := <-v.logChan
+		if v.logRing.Len() < 10 {
+			v.logRing.PushBack(line)
+		} else {
+			v.logRing.Rotate(1)
+			v.logRing.Set(9, line)
+		}
+	}
 }
 
 // Map given host to 127.0.0.1 in system hosts file (usually /etc/hosts)

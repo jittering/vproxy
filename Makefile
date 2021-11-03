@@ -14,7 +14,7 @@ release: clean
 build-brew:
 	 go build -o vproxy ./bin/vproxy/
 	 sudo mv vproxy /usr/local/opt/vproxy/bin/vproxy
-	 sudo killall vproxy
+	 sudo pkill -f 'vproxy daemon'
 
 clean:
 	rm -f ./vproxy*

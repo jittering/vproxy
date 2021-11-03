@@ -103,7 +103,10 @@ func (lh *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	elapsedTime := finishTime.Sub(startTime)
 	host := getHostName(r.Host)
 
-	l := fmt.Sprintf("%s [%s] %s [ %d ] %s %d %s", r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
+	l := fmt.Sprintf("%s %s [%s] %s [ %d ] %s %d %s",
+		time.Now().Format("2006-01-02 15:04:05"),
+		r.RemoteAddr, host, r.Method, record.status, r.URL, r.ContentLength, elapsedTime)
+
 	lh.pushLog(host, l)
 }
 
@@ -111,7 +114,11 @@ func (lh *LoggedHandler) pushLog(host string, msg string) {
 	log.Println(msg)
 
 	if vhost := lh.GetVhost(host); vhost != nil {
-		vhost.LogChan <- msg
+		vhost.logChan <- msg // push to buffer
+		for _, logChan := range vhost.listeners {
+			// push to client listeners
+			logChan <- msg
+		}
 	}
 }
 
