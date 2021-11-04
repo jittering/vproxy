@@ -137,7 +137,10 @@ func (c *Client) RemoveVhost(hostname string, all bool) {
 	defer res.Body.Close()
 	r := bufio.NewReader(res.Body)
 	b, _ := ioutil.ReadAll(r)
-	fmt.Println(string(b))
+	s := strings.TrimSpace(string(b))
+	if s != "" {
+		fmt.Println(s)
+	}
 }
 
 // IsDaemonRunning tries to check if a vproxy daemon is already running on the given addr

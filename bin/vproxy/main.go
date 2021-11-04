@@ -76,8 +76,14 @@ func connectVhost(c *cli.Context) error {
 
 func disconnectVhost(c *cli.Context) error {
 	hostname := c.Args().First()
+	all := c.Bool("all")
+
+	if !all && hostname == "" {
+		return fmt.Errorf("missing hostname or --all")
+	}
+
 	client := createClient(c)
-	client.RemoveVhost(hostname, c.Bool("all"))
+	client.RemoveVhost(hostname, all)
 	return nil
 }
 

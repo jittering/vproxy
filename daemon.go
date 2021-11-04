@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -240,14 +241,31 @@ func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx
 
 func (d *Daemon) removeVhost(w http.ResponseWriter, r *http.Request) {
 	hostname := r.PostFormValue("host")
-	vhost := d.loggedHandler.GetVhost(hostname)
-	if vhost == nil {
-		fmt.Fprintf(w, "error: host '%s' not found", hostname)
+	all, _ := strconv.ParseBool(r.PostFormValue("all"))
+
+	if all {
+		for _, vhost := range d.loggedHandler.vhostMux.Servers {
+			d.doRemoveVhost(vhost, w)
+		}
+
+	} else if hostname != "" {
+		vhost := d.loggedHandler.GetVhost(hostname)
+		if vhost == nil {
+			fmt.Fprintf(w, "error: host '%s' not found", hostname)
+			return
+		}
+		d.doRemoveVhost(vhost, w)
+
+	} else {
+		fmt.Fprint(w, "error: missing hostname")
 		return
 	}
 
+}
+
+func (d *Daemon) doRemoveVhost(vhost *Vhost, w http.ResponseWriter) {
 	fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
-	fmt.Fprintf(w, "removing vhost: %s -> %d", vhost.Host, vhost.Port)
+	fmt.Fprintf(w, "removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
 	vhost.Close()
 	d.loggedHandler.RemoveVhost(vhost.Host)
 }
