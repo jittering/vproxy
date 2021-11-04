@@ -110,6 +110,7 @@ func (d *Daemon) Run() {
 	d.loggedHandler.HandleFunc("/_vproxy/clients", d.listClients)
 	d.loggedHandler.HandleFunc("/_vproxy/clients/add", d.registerVhost)
 	d.loggedHandler.HandleFunc("/_vproxy/clients/stream", d.streamLogs)
+	d.loggedHandler.HandleFunc("/_vproxy/clients/remove", d.removeVhost)
 	d.wg.Add(1) // ensure we don't exit immediately
 
 	if d.enableHTTP() {
@@ -235,6 +236,20 @@ func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx
 			flusher.Flush()
 		}
 	}
+}
+
+func (d *Daemon) removeVhost(w http.ResponseWriter, r *http.Request) {
+	hostname := r.PostFormValue("host")
+	vhost := d.loggedHandler.GetVhost(hostname)
+	if vhost == nil {
+		fmt.Fprintf(w, "error: host '%s' not found", hostname)
+		return
+	}
+
+	fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
+	fmt.Fprintf(w, "removing vhost: %s -> %d", vhost.Host, vhost.Port)
+	vhost.Close()
+	d.loggedHandler.RemoveVhost(vhost.Host)
 }
 
 // addVhost for the given binding to the LoggedHandler

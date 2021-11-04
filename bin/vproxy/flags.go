@@ -98,7 +98,7 @@ vproxy connect hello.local:8888 -- vproxy hello
 				Name:    "connect",
 				Aliases: []string{"client", "c", "add"},
 				Usage:   "Add a new vhost",
-				Action:  startClient,
+				Action:  connectVhost,
 				Before:  loadClientConfig,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -118,6 +118,30 @@ vproxy connect hello.local:8888 -- vproxy hello
 					&cli.BoolFlag{
 						Name:  "detach",
 						Usage: "Do not stream logs after binding",
+					},
+				},
+			},
+			{
+				Name:      "disconnect",
+				Aliases:   []string{"remove"},
+				Usage:     "Remove vhost",
+				Action:    disconnectVhost,
+				Before:    loadClientConfig,
+				UsageText: `vproxy disconnect [command options] <hostname>`,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "host",
+						Value: "127.0.0.1",
+						Usage: "Daemon host IP",
+					},
+					&cli.IntFlag{
+						Name:  "http",
+						Value: 80,
+						Usage: "Daemon HTTP port",
+					},
+					&cli.BoolFlag{
+						Name:  "all",
+						Usage: "Remove all vhosts",
 					},
 				},
 			},

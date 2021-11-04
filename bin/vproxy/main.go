@@ -37,7 +37,7 @@ func printVersion(c *cli.Context) error {
 	return nil
 }
 
-func startClient(c *cli.Context) error {
+func connectVhost(c *cli.Context) error {
 
 	// collect and validate binds
 	args := c.Args().Slice()
@@ -71,6 +71,13 @@ func startClient(c *cli.Context) error {
 	}
 
 	client.AddBindings(binds, c.Bool("detach"), args)
+	return nil
+}
+
+func disconnectVhost(c *cli.Context) error {
+	hostname := c.Args().First()
+	client := createClient(c)
+	client.RemoveVhost(hostname, c.Bool("all"))
 	return nil
 }
 

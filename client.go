@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -71,7 +72,7 @@ func (c *Client) addBinding(bind string, detach bool) {
 
 	s := strings.Split(bind, ":")
 	if len(s) >= 2 {
-		fmt.Printf("[*] registering vhost: %s -> https://%s\n", bind, s[0])
+		fmt.Printf("[*] registering vhost: https://%s -> %s\n", s[0], bind)
 	} else {
 		fmt.Println("[*] registering vhost:", bind)
 	}
@@ -94,8 +95,7 @@ func (c *Client) Tail(hostname string, follow bool) {
 	data.Add("host", hostname)
 	res, err := http.DefaultClient.PostForm(c.uri("/clients/stream"), data)
 	if err != nil {
-		stopCommand(c.cmd)
-		log.Fatalf("error registering client: %s\n", err)
+		log.Fatalf("error: %s\n", err)
 	}
 	fmt.Printf("[*] streaming logs for %s\n", hostname)
 	streamLogs(res, follow)
@@ -124,6 +124,20 @@ func streamLogs(res *http.Response, follow bool) {
 
 		fmt.Print(line)
 	}
+}
+
+func (c *Client) RemoveVhost(hostname string, all bool) {
+	data := url.Values{}
+	data.Add("host", hostname)
+	data.Add("all", strconv.FormatBool(all))
+	res, err := http.DefaultClient.PostForm(c.uri("/clients/remove"), data)
+	if err != nil {
+		log.Fatalf("error: %s\n", err)
+	}
+	defer res.Body.Close()
+	r := bufio.NewReader(res.Body)
+	b, _ := ioutil.ReadAll(r)
+	fmt.Println(string(b))
 }
 
 // IsDaemonRunning tries to check if a vproxy daemon is already running on the given addr
