@@ -166,8 +166,7 @@ func (v *Vhost) Close() {
 }
 
 func (v *Vhost) populateLogBuffer() {
-	for {
-		line := <-v.logChan
+	for line := range v.logChan {
 		if v.logRing.Len() < 10 {
 			v.logRing.PushBack(line)
 		} else {
