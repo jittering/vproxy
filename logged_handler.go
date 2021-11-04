@@ -111,7 +111,7 @@ func (lh *LoggedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (lh *LoggedHandler) pushLog(host string, msg string) {
-	log.Println(msg)
+	fmt.Println(msg)
 
 	if vhost := lh.GetVhost(host); vhost != nil {
 		vhost.logChan <- msg // push to buffer

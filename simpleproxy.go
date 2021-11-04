@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 )
@@ -39,7 +40,9 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 		return err
 	}
 
-	err = backoff.Retry(operation, backoff.NewExponentialBackOff())
+	be := backoff.NewExponentialBackOff()
+	be.MaxElapsedTime = time.Second * 30
+	err = backoff.Retry(operation, be)
 	if err != nil {
 		resp := &http.Response{
 			StatusCode: http.StatusServiceUnavailable,
@@ -48,7 +51,7 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 
 		resp.StatusCode = 503
 		resp.Status = "Can't connect to upstream server"
-		log.Println("error fetching from upstream:", err)
+		log.Println("proxy: error fetching from upstream:", err)
 		return resp, nil
 	}
 
