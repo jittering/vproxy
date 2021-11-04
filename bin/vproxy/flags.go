@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jittering/vproxy"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,6 +54,14 @@ vproxy connect hello.local:8888 -- vproxy hello
 		CommandNotFound: func(c *cli.Context, cmd string) {
 			fmt.Printf("error: unknown command '%s'\n\n", cmd)
 			cli.ShowAppHelpAndExit(c, 1)
+		},
+
+		Before: func(c *cli.Context) error {
+			vproxy.VERBOSE = c.Bool("verbose")
+			if vproxy.VERBOSE {
+				fmt.Println("[*] enabled verbose output")
+			}
+			return nil
 		},
 
 		Flags: []cli.Flag{

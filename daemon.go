@@ -16,6 +16,9 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+// Controls whether verbose messages should be printed
+var VERBOSE = false
+
 // PONG server identifier
 const PONG = "hello from vproxy"
 
