@@ -190,13 +190,6 @@ func (d *Daemon) restartTLS() {
 func (d *Daemon) registerVhost(w http.ResponseWriter, r *http.Request) {
 	binding := r.PostFormValue("binding")
 	d.addVhost(binding, w)
-
-	// defer func() {
-	// 	// Remove this client when this handler exits
-	// 	fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.Port)
-	// 	d.loggedHandler.RemoveVhost(vhost.Host)
-	// 	d.restartTLS()
-	// }()
 }
 
 // streamLogs for a given hostname back to the caller. Runs forever until client
