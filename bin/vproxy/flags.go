@@ -200,6 +200,7 @@ vproxy connect hello.local:8888 -- vproxy hello
 			{
 				Name:   "caroot",
 				Usage:  "Print CAROOT path and exit",
+				Hidden: hideFlags,
 				Action: printCAROOT,
 				Before: loadClientConfig,
 				Flags: []cli.Flag{
@@ -244,6 +245,7 @@ vproxy connect hello.local:8888 -- vproxy hello
 			{
 				Name:   "bash_completion",
 				Usage:  "Generate bash completion script",
+				Hidden: hideFlags,
 				Action: genBashCompletion,
 				Description: `To use bash completion, add the following to your .bashrc:
 
@@ -277,7 +279,7 @@ or add a file to your bash_completion.d:
 // Hide flags unless verbose flag set
 func shouldHideFlags() bool {
 	for _, f := range os.Args {
-		if f == "--verbose" || f == "-v" {
+		if f == "--verbose" || f == "-v" || f == "--generate-bash-completion" {
 			return false
 		}
 	}

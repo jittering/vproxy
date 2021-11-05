@@ -261,8 +261,7 @@ func printInfo(c *cli.Context) error {
 }
 
 func genBashCompletion(c *cli.Context) error {
-	comp := `
-#! /bin/bash
+	comp := `#! /bin/bash
 
 _cli_bash_autocomplete() {
 	if [[ "${COMP_WORDS[0]}" != "source" ]]; then
