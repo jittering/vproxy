@@ -39,17 +39,8 @@ brews:
     # Default to project name
     name: vproxy
 
-    # GOARM to specify which 32-bit arm version to use if there are multiple versions
-    # from the build section. Brew formulas support atm only one 32-bit version.
-    # Default is 6 for all artifacts or each id if there a multiple versions.
-    goarm: 6
+    goarm: "6"
 
-    # NOTE: make sure the url_template, the token and given repo (github or gitlab) owner and name are from the
-    # same kind. We will probably unify this in the next major version like it is done with scoop.
-
-    # Template for the url which is determined by the given Token (github or gitlab)
-    # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    # Default for gitlab is "https://gitlab.com/<repo_owner>/<repo_name>/uploads/{{ .ArtifactUploadHash }}/{{ .ArtifactName }}"
     url_template: "https://github.com/jittering/vproxy/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
     commit_author:
@@ -112,6 +103,179 @@ brews:
 
     install: |
       bin.install "vproxy"
+
+      bash_output = Utils.safe_popen_read("#{bin}/vproxy", "bash_completion")
+      (bash_completion/"vproxy").write bash_output
+
+    post_install: |
+      str = <<-EOF
+      # Sample config file
+      # All commented settings below are defaults
+
+      # Enable verbose output
+      #verbose = false
+
+      [server]
+      # Enable verbose output (for daemon only)
+      #verbose = false
+
+      # IP on which server will listen
+      # To listen on all IPs, set listen = "0.0.0.0"
+      #listen = "127.0.0.1"
+
+      # Ports to listen on
+      #http = 80
+      #https = 443
+
+
+      # CAROOT path
+      caroot_path = "#{var}/vproxy/caroot"
+
+      # Path where generated certificates should be stored
+      cert_path = "#{var}/vproxy/cert"
+
+      [client]
+      # Enable verbose output (for client only)
+      #verbose = false
+
+      #host = "127.0.0.1"
+      #http = 80
+
+      # Use this in local config files, i.e., a .vproxy.conf file located in a
+      # project folder
+      #bind = ""
+      EOF
+      str = str.gsub(/^[\t ]+/, "") # trim leading spaces
+      conf_file = "#{etc}/vproxy.conf"
+
+      # always write new sample file
+      File.open(conf_file+".sample", "w") do |f|
+        f.puts str
+      end
+
+      # only create default conf if it doesn't already exist
+      if !File.exist?(conf_file) then
+        File.open(conf_file, "w") do |f|
+          f.puts str
+        end
+      end
+
+      # setup var dir, if needed
+      if !File.exist?("#{var}/vproxy") then
+        puts ohai_title("creating #{var}/vproxy")
+
+        # Create/migrate caroot
+        mkdir_p("#{var}/vproxy/caroot", mode: 0755)
+        mkcert_caroot = "#{`#{bin}/vproxy caroot --default`.strip}"
+        pems = Dir.glob("#{mkcert_caroot}/*.pem")
+        if pems.empty? then
+          puts ohai_title("caroot not found; create with: vaproxy caroot --create")
+        else
+          puts ohai_title("migrating caroot")
+          cp(pems, "#{var}/vproxy/caroot")
+        end
+
+        # Create/migrate cert path
+        puts ohai_title("created cert dir #{var}/vproxy/cert")
+        mkdir_p("#{var}/vproxy/cert", mode: 0755)
+        if File.exist?(old_cert_path) then
+          certs = Dir.glob(old_cert_path+"/*.pem")
+          puts ohai_title("migrating #{certs.size} certs")
+          errs = 0
+          certs.each do |cert|
+            if File.readable?(cert)
+              cp(cert, "#{var}/vproxy/cert")
+            else
+              errs += 1
+            end
+          end
+          onoe("couldn't read #{errs} cert(s)") if errs > 0
+        end
+      end
+
+  - tap:
+      owner: jittering
+      name: homebrew-kegs
+
+    # Default to project name
+    name: vproxy-head
+
+    goarm: "6"
+
+    url_template: "https://github.com/jittering/vproxy/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+    commit_author:
+      name: Chetan Sarva (via goreleaser)
+      email: chetan@pixelcop.net
+
+    folder: Formula
+
+    homepage: "https://github.com/jittering/vproxy"
+    description: "zero-config virtual proxies with tls"
+
+    # skip_upload: true
+
+    # Packages your package depends on.
+    dependencies:
+      - name: mkcert
+      - name: go
+
+    # Specify for packages that run as a service.
+    # Default is empty.
+    plist: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+        <dict>
+          <key>KeepAlive</key>
+          <dict>
+            <key>SuccessfulExit</key>
+            <false/>
+          </dict>
+          <key>Label</key>
+          <string>#{plist_name}</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>#{bin}/vproxy</string>
+            <string>daemon</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+          <key>WorkingDirectory</key>
+          <string>#{var}</string>
+          <key>StandardErrorPath</key>
+          <string>#{var}/log/vproxy.log</string>
+          <key>StandardOutPath</key>
+          <string>#{var}/log/vproxy.log</string>
+        </dict>
+      </plist>
+
+    caveats: |
+      To install your local root CA:
+        $ vproxy caroot --create
+
+      vproxy data is stored in #{var}/vproxy
+
+      The local root CA is in #{var}/vproxy/caroot;
+        certs will be stored in #{var}/vproxy/cert when generated.
+
+      See vproxy documentation for more info
+
+    test: system "#{bin}/vproxy --version"
+
+    custom_block: |
+      head "https://github.com/jittering/vproxy.git"
+
+    install: |
+      if build.head?
+        system "go", "build", *std_go_args(output: "build/vproxy"), "./bin/vproxy"
+        bin.install "build/vproxy"
+      else
+        bin.install "vproxy"
+      end
+
+      bash_output = Utils.safe_popen_read("#{bin}/vproxy", "bash_completion")
+      (bash_completion/"vproxy").write bash_output
 
     post_install: |
       str = <<-EOF
