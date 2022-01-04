@@ -50,7 +50,7 @@ brews:
     folder: Formula
 
     homepage: "https://github.com/jittering/vproxy"
-    description: "zero-config virtual proxies with tls"
+    description: "Zero-config virtual proxies with tls"
 
     # skip_upload: true
 
@@ -99,7 +99,7 @@ brews:
 
       See vproxy documentation for more info
 
-    test: system "#{bin}/vproxy --version"
+    test: system "#{bin}/vproxy", "--version"
 
     install: |
       bin.install "vproxy"
@@ -108,90 +108,90 @@ brews:
       (bash_completion/"vproxy").write bash_output
 
     post_install: |
-      str = <<-EOF
-      # Sample config file
-      # All commented settings below are defaults
+      str = <<~EOF
+            # Sample config file
+            # All commented settings below are defaults
 
-      # Enable verbose output
-      #verbose = false
+            # Enable verbose output
+            #verbose = false
 
-      [server]
-      # Enable verbose output (for daemon only)
-      #verbose = false
+            [server]
+            # Enable verbose output (for daemon only)
+            #verbose = false
 
-      # IP on which server will listen
-      # To listen on all IPs, set listen = "0.0.0.0"
-      #listen = "127.0.0.1"
+            # IP on which server will listen
+            # To listen on all IPs, set listen = "0.0.0.0"
+            #listen = "127.0.0.1"
 
-      # Ports to listen on
-      #http = 80
-      #https = 443
+            # Ports to listen on
+            #http = 80
+            #https = 443
 
 
-      # CAROOT path
-      caroot_path = "#{var}/vproxy/caroot"
+            # CAROOT path
+            caroot_path = "#{var}/vproxy/caroot"
 
-      # Path where generated certificates should be stored
-      cert_path = "#{var}/vproxy/cert"
+            # Path where generated certificates should be stored
+            cert_path = "#{var}/vproxy/cert"
 
-      [client]
-      # Enable verbose output (for client only)
-      #verbose = false
+            [client]
+            # Enable verbose output (for client only)
+            #verbose = false
 
-      #host = "127.0.0.1"
-      #http = 80
+            #host = "127.0.0.1"
+            #http = 80
 
-      # Use this in local config files, i.e., a .vproxy.conf file located in a
-      # project folder
-      #bind = ""
-      EOF
-      str = str.gsub(/^[\t ]+/, "") # trim leading spaces
-      conf_file = "#{etc}/vproxy.conf"
+            # Use this in local config files, i.e., a .vproxy.conf file located in a
+            # project folder
+            #bind = ""
+          EOF
+          str = str.gsub(/^[\t ]+/, "") # trim leading spaces
+          conf_file = "#{etc}/vproxy.conf"
 
-      # always write new sample file
-      File.open(conf_file+".sample", "w") do |f|
-        f.puts str
-      end
+          # always write new sample file
+          File.open("#{conf_file}.sample", "w") do |f|
+            f.puts str
+          end
 
-      # only create default conf if it doesn't already exist
-      if !File.exist?(conf_file) then
-        File.open(conf_file, "w") do |f|
-          f.puts str
-        end
-      end
-
-      # setup var dir, if needed
-      if !File.exist?("#{var}/vproxy") then
-        puts ohai_title("creating #{var}/vproxy")
-
-        # Create/migrate caroot
-        mkdir_p("#{var}/vproxy/caroot", mode: 0755)
-        mkcert_caroot = "#{`#{bin}/vproxy caroot --default`.strip}"
-        pems = Dir.glob("#{mkcert_caroot}/*.pem")
-        if pems.empty? then
-          puts ohai_title("caroot not found; create with: vaproxy caroot --create")
-        else
-          puts ohai_title("migrating caroot")
-          cp(pems, "#{var}/vproxy/caroot")
-        end
-
-        # Create/migrate cert path
-        puts ohai_title("created cert dir #{var}/vproxy/cert")
-        mkdir_p("#{var}/vproxy/cert", mode: 0755)
-        if File.exist?(old_cert_path) then
-          certs = Dir.glob(old_cert_path+"/*.pem")
-          puts ohai_title("migrating #{certs.size} certs")
-          errs = 0
-          certs.each do |cert|
-            if File.readable?(cert)
-              cp(cert, "#{var}/vproxy/cert")
-            else
-              errs += 1
+          # only create default conf if it doesn't already exist
+          unless File.exist?(conf_file)
+            File.open(conf_file, "w") do |f|
+              f.puts str
             end
           end
-          onoe("couldn't read #{errs} cert(s)") if errs > 0
-        end
-      end
+
+          # setup var dir, if needed
+          unless File.exist?("#{var}/vproxy")
+            puts ohai_title("creating #{var}/vproxy")
+
+            # Create/migrate caroot
+            mkdir_p("#{var}/vproxy/caroot", mode: 0755)
+            mkcert_caroot = `#{bin}/vproxy caroot --default`.strip
+            pems = Dir.glob("#{mkcert_caroot}/*.pem")
+            if pems.empty?
+              puts ohai_title("caroot not found; create with: vaproxy caroot --create")
+            else
+              puts ohai_title("migrating caroot")
+              cp(pems, "#{var}/vproxy/caroot")
+            end
+
+            # Create/migrate cert path
+            puts ohai_title("created cert dir #{var}/vproxy/cert")
+            mkdir_p("#{var}/vproxy/cert", mode: 0755)
+            if File.exist?(old_cert_path)
+              certs = Dir.glob("#{old_cert_path}/*.pem")
+              puts ohai_title("migrating #{certs.size} certs")
+              errs = 0
+              certs.each do |cert|
+                if File.readable?(cert)
+                  cp(cert, "#{var}/vproxy/cert")
+                else
+                  errs += 1
+                end
+              end
+              onoe("couldn't read #{errs} cert(s)") if errs.positive?
+            end
+          end
 
   - tap:
       owner: jittering
@@ -211,7 +211,7 @@ brews:
     folder: Formula
 
     homepage: "https://github.com/jittering/vproxy"
-    description: "zero-config virtual proxies with tls"
+    description: "Zero-config virtual proxies with tls"
 
     # skip_upload: true
 
@@ -261,7 +261,7 @@ brews:
 
       See vproxy documentation for more info
 
-    test: system "#{bin}/vproxy --version"
+    test: system "#{bin}/vproxy", "--version"
 
     custom_block: |
       head "https://github.com/jittering/vproxy.git"
@@ -278,87 +278,87 @@ brews:
       (bash_completion/"vproxy").write bash_output
 
     post_install: |
-      str = <<-EOF
-      # Sample config file
-      # All commented settings below are defaults
+      str = <<~EOF
+            # Sample config file
+            # All commented settings below are defaults
 
-      # Enable verbose output
-      #verbose = false
+            # Enable verbose output
+            #verbose = false
 
-      [server]
-      # Enable verbose output (for daemon only)
-      #verbose = false
+            [server]
+            # Enable verbose output (for daemon only)
+            #verbose = false
 
-      # IP on which server will listen
-      # To listen on all IPs, set listen = "0.0.0.0"
-      #listen = "127.0.0.1"
+            # IP on which server will listen
+            # To listen on all IPs, set listen = "0.0.0.0"
+            #listen = "127.0.0.1"
 
-      # Ports to listen on
-      #http = 80
-      #https = 443
+            # Ports to listen on
+            #http = 80
+            #https = 443
 
 
-      # CAROOT path
-      caroot_path = "#{var}/vproxy/caroot"
+            # CAROOT path
+            caroot_path = "#{var}/vproxy/caroot"
 
-      # Path where generated certificates should be stored
-      cert_path = "#{var}/vproxy/cert"
+            # Path where generated certificates should be stored
+            cert_path = "#{var}/vproxy/cert"
 
-      [client]
-      # Enable verbose output (for client only)
-      #verbose = false
+            [client]
+            # Enable verbose output (for client only)
+            #verbose = false
 
-      #host = "127.0.0.1"
-      #http = 80
+            #host = "127.0.0.1"
+            #http = 80
 
-      # Use this in local config files, i.e., a .vproxy.conf file located in a
-      # project folder
-      #bind = ""
-      EOF
-      str = str.gsub(/^[\t ]+/, "") # trim leading spaces
-      conf_file = "#{etc}/vproxy.conf"
+            # Use this in local config files, i.e., a .vproxy.conf file located in a
+            # project folder
+            #bind = ""
+          EOF
+          str = str.gsub(/^[\t ]+/, "") # trim leading spaces
+          conf_file = "#{etc}/vproxy.conf"
 
-      # always write new sample file
-      File.open(conf_file+".sample", "w") do |f|
-        f.puts str
-      end
+          # always write new sample file
+          File.open("#{conf_file}.sample", "w") do |f|
+            f.puts str
+          end
 
-      # only create default conf if it doesn't already exist
-      if !File.exist?(conf_file) then
-        File.open(conf_file, "w") do |f|
-          f.puts str
-        end
-      end
-
-      # setup var dir, if needed
-      if !File.exist?("#{var}/vproxy") then
-        puts ohai_title("creating #{var}/vproxy")
-
-        # Create/migrate caroot
-        mkdir_p("#{var}/vproxy/caroot", mode: 0755)
-        mkcert_caroot = "#{`#{bin}/vproxy caroot --default`.strip}"
-        pems = Dir.glob("#{mkcert_caroot}/*.pem")
-        if pems.empty? then
-          puts ohai_title("caroot not found; create with: vaproxy caroot --create")
-        else
-          puts ohai_title("migrating caroot")
-          cp(pems, "#{var}/vproxy/caroot")
-        end
-
-        # Create/migrate cert path
-        puts ohai_title("created cert dir #{var}/vproxy/cert")
-        mkdir_p("#{var}/vproxy/cert", mode: 0755)
-        if File.exist?(old_cert_path) then
-          certs = Dir.glob(old_cert_path+"/*.pem")
-          puts ohai_title("migrating #{certs.size} certs")
-          errs = 0
-          certs.each do |cert|
-            if File.readable?(cert)
-              cp(cert, "#{var}/vproxy/cert")
-            else
-              errs += 1
+          # only create default conf if it doesn't already exist
+          unless File.exist?(conf_file)
+            File.open(conf_file, "w") do |f|
+              f.puts str
             end
           end
-          onoe("couldn't read #{errs} cert(s)") if errs > 0
-        end
-      end
+
+          # setup var dir, if needed
+          unless File.exist?("#{var}/vproxy")
+            puts ohai_title("creating #{var}/vproxy")
+
+            # Create/migrate caroot
+            mkdir_p("#{var}/vproxy/caroot", mode: 0755)
+            mkcert_caroot = `#{bin}/vproxy caroot --default`.strip
+            pems = Dir.glob("#{mkcert_caroot}/*.pem")
+            if pems.empty?
+              puts ohai_title("caroot not found; create with: vaproxy caroot --create")
+            else
+              puts ohai_title("migrating caroot")
+              cp(pems, "#{var}/vproxy/caroot")
+            end
+
+            # Create/migrate cert path
+            puts ohai_title("created cert dir #{var}/vproxy/cert")
+            mkdir_p("#{var}/vproxy/cert", mode: 0755)
+            if File.exist?(old_cert_path)
+              certs = Dir.glob("#{old_cert_path}/*.pem")
+              puts ohai_title("migrating #{certs.size} certs")
+              errs = 0
+              certs.each do |cert|
+                if File.readable?(cert)
+                  cp(cert, "#{var}/vproxy/cert")
+                else
+                  errs += 1
+                end
+              end
+              onoe("couldn't read #{errs} cert(s)") if errs.positive?
+            end
+          end
