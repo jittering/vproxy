@@ -26,11 +26,6 @@ func parseFlags() {
 		Aliases: []string{"V"},
 		Usage:   "Print the version",
 	}
-	cli.HelpFlag = &cli.BoolFlag{
-		Name:    "help",
-		Aliases: []string{"h"},
-		Usage:   "Show help (add -v to show all)",
-	}
 
 	hideFlags := shouldHideFlags()
 
@@ -255,6 +250,28 @@ or add a file to your bash_completion.d:
 
 	vproxy bash_completion > /etc/bash_completion.d/vproxy
 				`,
+			},
+			{
+				Name:      "help",
+				Aliases:   []string{"h"},
+				Usage:     "Shows a list of commands (add -v to show all) or help for one command",
+				Hidden:    false,
+				ArgsUsage: "[command]",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "verbose",
+						Aliases: []string{"v"},
+						Usage:   "Show all commands",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					args := c.Args()
+					if args.Present() {
+						return cli.ShowCommandHelp(c, args.First())
+					}
+					_ = cli.ShowAppHelp(c)
+					return nil
+				},
 			},
 			{
 				Name:   "version",
