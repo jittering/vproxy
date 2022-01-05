@@ -1,10 +1,14 @@
 # vproxy
 
-> Zero-config virtual host reverse proxies with TLS, for local development
+__A zero-config service mesh for local development__
 
-Automatically update the hosts file and generate TLS certificates for any
-hostname using a locally-trusted CA (via
-[mkcert](https://github.com/FiloSottile/mkcert)/[truststore](https://github.com/jittering/truststore)).
+Stop trying to remember port numbers and create secure endpoints for all of your
+services. Automatically updates your hosts file, generates TLS certificates,
+(via
+[mkcert](https://github.com/FiloSottile/mkcert)/[truststore](https://github.com/jittering/truststore)),
+and binds a reverse proxy with a single command.
+
+No third-party dependencies. No Docker. No Kubernetes.
 
 ## Quickstart
 
