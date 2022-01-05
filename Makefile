@@ -1,8 +1,13 @@
 
+SHELL := bash
+
 build: clean
+	go build ./bin/vproxy
+
+snapshot: clean
 	goreleaser release --snapshot --rm-dist
 
-install-formula: build
+install-formula: snapshot
 	cp -a dist/vproxy.rb dist/vproxy-head.rb /usr/local/Homebrew/Library/Taps/jittering/homebrew-kegs/Formula/
 
 build-linux:
@@ -14,6 +19,14 @@ build-mac:
 release: clean
 	goreleaser release --rm-dist
 
+check-style:
+	goreleaser check
+	goreleaser --snapshot --skip-validate --rm-dist
+	# get cops
+	cops=$$(cat /usr/local/Homebrew/Library/Taps/jittering/homebrew-kegs/.rubocop.yml \
+		| grep -v Enabled | grep -v '#' | grep -v '^$$' | tr ':\n' ','); \
+		brew style --display-cop-names --except-cops="$${cops}" ./dist/*.rb;
+
 build-brew:
 	 go build -o vproxy ./bin/vproxy/
 	 sudo mv vproxy /usr/local/opt/vproxy/bin/vproxy
@@ -22,9 +35,6 @@ build-brew:
 clean:
 	rm -f ./vproxy*
 	rm -rf ./dist/
-
-vproxy:
-	go build ./bin/vproxy
 
 install: vproxy
 	sudo cp -a ./vproxy /usr/local/bin/vproxy
