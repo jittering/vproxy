@@ -23,7 +23,8 @@ var badGatewayMessage = `<html>
 // proxyTransport is a simple http.RoundTripper implementation which returns a
 // 503 on any error making a request to the upstream (backend) service
 type proxyTransport struct {
-	errMsg string
+	transport *http.Transport
+	errMsg    string
 }
 
 func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -34,7 +35,7 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 	)
 
 	operation := func() error {
-		response, err = http.DefaultTransport.RoundTrip(request)
+		response, err = t.transport.RoundTrip(request)
 		// Handle Retry-After here, if you wish...
 		// If err is nil, no retry will occur
 		return err
@@ -59,7 +60,13 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 }
 
 func createProxyTransport(targetURL url.URL, vhost string) *proxyTransport {
-	return &proxyTransport{errMsg: fmt.Sprintf(badGatewayMessage, targetURL.String(), vhost)}
+	fmt.Println("creating new transport")
+	t := &proxyTransport{errMsg: fmt.Sprintf(badGatewayMessage, targetURL.String(), vhost)}
+	t.transport = http.DefaultTransport.(*http.Transport).Clone()
+	t.transport.MaxConnsPerHost = 0 // unlim
+	t.transport.MaxIdleConns = 800
+	t.transport.MaxIdleConnsPerHost = 8
+	return t
 }
 
 // CreateProxy with custom http.RoundTripper impl. Sets proper host headers

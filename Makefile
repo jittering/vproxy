@@ -36,5 +36,5 @@ clean:
 	rm -f ./vproxy*
 	rm -rf ./dist/
 
-install: vproxy
+install: build
 	sudo cp -a ./vproxy /usr/local/bin/vproxy
