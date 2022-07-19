@@ -16,6 +16,9 @@ build-linux:
 build-mac:
 	 GOOS=darwin go build -o vproxy-macos-x64 ./bin/vproxy/
 
+build-windows:
+	GOOS=windows go build -o vproxy-windows-x64 ./bin/vproxy/
+
 release: clean
 	goreleaser release --rm-dist
 
