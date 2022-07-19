@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/shirou/gopsutil/process"
 )
 
 func runCommand(args []string) *exec.Cmd {
@@ -29,9 +31,18 @@ func stopCommand(cmd *exec.Cmd) {
 	}
 
 	fmt.Println("[*] stopping process", cmd.Process.Pid)
-	e := cmd.Process.Signal(syscall.SIGTERM)
-	if e != nil {
-		fmt.Println("error killing child process:", e)
+	proc, err := process.NewProcess(int32(cmd.Process.Pid))
+	if err != nil {
+		fmt.Println("error finding child process:", err)
+		err := cmd.Process.Signal(syscall.SIGTERM)
+		if err != nil {
+			fmt.Println("error killing child process:", err)
+		}
+	} else {
+		err = proc.Terminate()
+		if err != nil {
+			fmt.Println("error killing child process:", err)
+		}
 	}
 	cmd.Process.Wait()
 }
