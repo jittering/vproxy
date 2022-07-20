@@ -292,7 +292,9 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	d.loggedHandler.AddVhost(vhost)
-	d.restartTLS()
+	if d.enableTLS() {
+		d.restartTLS()
+	}
 
 	err = addToHosts(vhost.Host)
 	if err != nil {
