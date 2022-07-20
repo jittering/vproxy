@@ -73,7 +73,7 @@ func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
 	// Add default internal cert
 	cert, err := tls.LoadX509KeyPair(lh.defaultCert, lh.defaultKey)
 	if err != nil {
-		log.Fatal("failed to load keypair:", err)
+		log.Fatal("failed to load internal keypair:", err)
 	}
 	cfg.Certificates = append(cfg.Certificates, cert)
 
@@ -81,7 +81,7 @@ func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
 	for _, server := range lh.vhostMux.Servers {
 		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
 		if err != nil {
-			log.Fatal("failed to load keypair:", err)
+			log.Fatalf("failed to load keypair (%s, %s): %s", server.Cert, server.Key, err)
 		}
 		cfg.Certificates = append(cfg.Certificates, cert)
 	}

@@ -110,10 +110,23 @@ vproxy connect hello.local:8888 -- vproxy hello
 						Value: "127.0.0.1",
 						Usage: "Server host IP",
 					},
+					&cli.StringFlag{
+						Name:    "listen",
+						Aliases: []string{"l"},
+						Value:   "127.0.0.1",
+						Usage:   "IP to listen on (when in single-client mode)",
+						Hidden:  hideFlags,
+					},
 					&cli.IntFlag{
 						Name:  "http",
 						Value: 80,
 						Usage: "Server HTTP port",
+					},
+					&cli.IntFlag{
+						Name:   "https",
+						Value:  443,
+						Usage:  "Server HTTPS port (when in single-client mode)",
+						Hidden: hideFlags,
 					},
 					&cli.StringSliceFlag{
 						Name:  "bind",

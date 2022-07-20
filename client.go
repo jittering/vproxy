@@ -3,6 +3,7 @@ package vproxy
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -31,12 +32,12 @@ func (c *Client) AddBindings(binds []string, detach bool, args []string) {
 		os.Exit(1)
 	}
 
-	c.runCommand(args)
+	c.RunCommand(args)
 
 	c.wg = &sync.WaitGroup{}
 	for _, bind := range binds {
 		c.wg.Add(1)
-		go c.addBinding(bind, detach)
+		go c.AddBinding(bind, detach)
 		c.wg.Wait()
 	}
 
@@ -44,7 +45,7 @@ func (c *Client) AddBindings(binds []string, detach bool, args []string) {
 	c.wg.Wait()
 }
 
-func (c *Client) runCommand(args []string) {
+func (c *Client) RunCommand(args []string) {
 	// run command, if given
 	if len(args) == 0 {
 		return
@@ -66,7 +67,8 @@ func (c *Client) runCommand(args []string) {
 	}()
 }
 
-func (c *Client) addBinding(bind string, detach bool) {
+// Add single binding. Blocks when detach=false
+func (c *Client) AddBinding(bind string, detach bool) {
 	data := url.Values{}
 	data.Add("binding", bind)
 
@@ -81,13 +83,17 @@ func (c *Client) addBinding(bind string, detach bool) {
 		stopCommand(c.cmd)
 		log.Fatalf("error registering client: %s\n", err)
 	}
+	b, err := io.ReadAll(res.Body)
+	if err == nil {
+		fmt.Println(string(b))
+	}
+	res.Body.Close()
 
 	if detach {
 		c.wg.Done()
 	} else {
 		c.Tail(s[0], true)
 	}
-	res.Body.Close()
 }
 
 func (c *Client) Tail(hostname string, follow bool) {

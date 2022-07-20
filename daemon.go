@@ -213,6 +213,10 @@ func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx
 		return
 	}
 
+	// initial flush to open the stream
+	fmt.Fprint(w, "")
+	flusher.Flush()
+
 	logChan := vhost.NewLogListener()
 
 	// read existing logs first

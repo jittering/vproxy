@@ -60,7 +60,6 @@ func (t *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error
 }
 
 func createProxyTransport(targetURL url.URL, vhost string) *proxyTransport {
-	fmt.Println("creating new transport")
 	t := &proxyTransport{errMsg: fmt.Sprintf(badGatewayMessage, targetURL.String(), vhost)}
 	t.transport = http.DefaultTransport.(*http.Transport).Clone()
 	t.transport.MaxConnsPerHost = 0 // unlim

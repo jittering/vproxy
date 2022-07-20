@@ -25,7 +25,6 @@ func runCommand(args []string) *exec.Cmd {
 }
 
 func stopCommand(cmd *exec.Cmd) {
-
 	if cmd == nil {
 		return
 	}

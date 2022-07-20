@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/jittering/truststore"
 	"github.com/jittering/vproxy"
@@ -38,7 +39,6 @@ func printVersion(c *cli.Context) error {
 }
 
 func connectVhost(c *cli.Context) error {
-
 	// collect and validate binds
 	args := c.Args().Slice()
 	binds := c.StringSlice("bind")
@@ -67,7 +67,27 @@ func connectVhost(c *cli.Context) error {
 
 	client := createClient(c)
 	if !client.IsDaemonRunning() {
-		return fmt.Errorf("daemon not running on localhost")
+		fmt.Println("[*] warning: daemon not running on localhost. running in single-client mode")
+
+		// start server with defaults
+		c.Set("listen", "127.0.0.1")
+		c.Set("https", "443")
+		go startDaemon(c)
+
+		// start command, if avail
+		client.RunCommand(args)
+
+		// wait for server
+		for {
+			if client.IsDaemonRunning() {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		// bind
+		client.AddBinding(binds[0], false)
+		return nil
 	}
 
 	client.AddBindings(binds, c.Bool("detach"), args)
