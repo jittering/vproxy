@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -214,7 +215,7 @@ func createCAROOT() error {
 		fmt.Printf("creating new CA at %s\n", path)
 	}
 
-	fmt.Printf("\n >> NOTE: you may be prompted to enter your sudo password <<\n\n")
+	warnPW()
 
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
@@ -235,6 +236,14 @@ func createCAROOT() error {
 	return nil
 }
 
+func warnPW() {
+	sudo := "sudo"
+	if runtime.GOOS == "windows" {
+		sudo = "admin"
+	}
+	fmt.Printf("\n >> NOTE: you may be prompted to enter your %s password <<\n\n", sudo)
+}
+
 func uninstallCAROOT() error {
 	path := vproxy.CARootPath()
 	os.Setenv("CAROOT", path)
@@ -244,7 +253,7 @@ func uninstallCAROOT() error {
 		return nil
 	}
 
-	fmt.Printf("\n >> NOTE: you may be prompted to enter your sudo password <<\n\n")
+	warnPW()
 
 	truststore.Print = true
 	err := vproxy.InitTrustStore()
