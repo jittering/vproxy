@@ -47,7 +47,15 @@ func NewDaemon(lh *LoggedHandler, listen string, httpPort int, httpsPort int) *D
 	return &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
 }
 
-func rerunWithSudo() {
+func rerunWithSudo(addr string) {
+	// ensure sudo exists on this OS
+	_, err := os.Stat("/usr/bin/sudo")
+	if err != nil {
+		fmt.Println("[*] error: unable to bind on ", addr)
+		log.Fatal("[*] fatal: sudo not found")
+		return
+	}
+
 	exe, e := os.Executable()
 	if e != nil {
 		log.Fatal(e)
@@ -89,7 +97,7 @@ func testListener(addr string) {
 				fmt.Println("[*] warning: looks like we are running as a headless daemon; won't try rerunning with sudo")
 				fmt.Println("[*]          instead, run the service as root. see docs for help.")
 			} else {
-				rerunWithSudo()
+				rerunWithSudo(addr)
 			}
 		}
 		log.Fatal(err)
