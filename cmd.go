@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"github.com/shirou/gopsutil/process"
 )
@@ -32,15 +31,14 @@ func stopCommand(cmd *exec.Cmd) {
 	fmt.Println("[*] stopping process", cmd.Process.Pid)
 	proc, err := process.NewProcess(int32(cmd.Process.Pid))
 	if err != nil {
-		fmt.Println("error finding child process:", err)
-		err := cmd.Process.Signal(syscall.SIGTERM)
-		if err != nil {
-			fmt.Println("error killing child process:", err)
+		if err.Error() == "process does not exist" {
+			return
 		}
+		fmt.Println("[*] warning: error finding child process:", err)
 	} else {
 		err = proc.Terminate()
 		if err != nil {
-			fmt.Println("error killing child process:", err)
+			fmt.Println("[*] error killing child process:", err)
 		}
 	}
 	cmd.Process.Wait()
