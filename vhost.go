@@ -69,7 +69,7 @@ func (v *VhostMux) DumpServers(w io.Writer) {
 	case 1:
 		fmt.Fprintln(w, "1 vhost:")
 	default:
-		fmt.Fprintf(w, "%d vhosts:", c)
+		fmt.Fprintf(w, "%d vhosts:\n", c)
 	}
 	for _, v := range v.Servers {
 		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
