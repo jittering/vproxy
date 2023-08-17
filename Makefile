@@ -5,7 +5,7 @@ build: clean
 	go build ./bin/vproxy
 
 snapshot: clean
-	goreleaser release --snapshot --rm-dist
+	goreleaser release --snapshot --clean
 
 install-formula: snapshot
 	cp -a dist/vproxy.rb dist/vproxy-head.rb /usr/local/Homebrew/Library/Taps/jittering/homebrew-kegs/Formula/
@@ -20,11 +20,11 @@ build-windows:
 	GOOS=windows go build -o vproxy-windows-x64 ./bin/vproxy/
 
 release: clean
-	goreleaser release --rm-dist
+	goreleaser release --clean
 
 check-style:
 	goreleaser check
-	goreleaser --snapshot --skip-validate --rm-dist
+	goreleaser --snapshot --skip-validate --clean
 	# get cops
 	cops=$$(cat /usr/local/Homebrew/Library/Taps/jittering/homebrew-kegs/.rubocop.yml \
 		| grep -v Enabled | grep -v '#' | grep -v '^$$' | tr ':\n' ','); \
