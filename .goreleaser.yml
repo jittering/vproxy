@@ -11,12 +11,7 @@ builds:
       - darwin
       - windows
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format_overrides:
       - goos: windows
         format: zip
@@ -37,7 +32,7 @@ release:
     name: vproxy
 
 brews:
-  - tap:
+  - repository:
       owner: jittering
       name: homebrew-kegs
 
@@ -64,35 +59,13 @@ brews:
       - name: mkcert
       - name: nss
 
-    # Specify for packages that run as a service.
-    # Default is empty.
-    plist: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-        <dict>
-          <key>KeepAlive</key>
-          <dict>
-            <key>SuccessfulExit</key>
-            <false/>
-          </dict>
-          <key>Label</key>
-          <string>#{plist_name}</string>
-          <key>ProgramArguments</key>
-          <array>
-            <string>#{bin}/vproxy</string>
-            <string>daemon</string>
-          </array>
-          <key>RunAtLoad</key>
-          <true/>
-          <key>WorkingDirectory</key>
-          <string>#{var}</string>
-          <key>StandardErrorPath</key>
-          <string>#{var}/log/vproxy.log</string>
-          <key>StandardOutPath</key>
-          <string>#{var}/log/vproxy.log</string>
-        </dict>
-      </plist>
+    service: |
+      name: "vproxy"
+      run: ["#{bin}/vproxy", "daemon"]
+      keep_alive: successful_exit: false
+      working_directory: "#{var}"
+      log_path: "#{var}/log/vproxy.log"
+      error_log_path: "#{var}/log/vproxy.log"
 
     caveats: |
       To install your local root CA:
@@ -199,7 +172,7 @@ brews:
             end
           end
 
-  - tap:
+  - repository:
       owner: jittering
       name: homebrew-kegs
 
@@ -227,35 +200,13 @@ brews:
       - name: nss
       - name: go
 
-    # Specify for packages that run as a service.
-    # Default is empty.
-    plist: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-        <dict>
-          <key>KeepAlive</key>
-          <dict>
-            <key>SuccessfulExit</key>
-            <false/>
-          </dict>
-          <key>Label</key>
-          <string>#{plist_name}</string>
-          <key>ProgramArguments</key>
-          <array>
-            <string>#{bin}/vproxy</string>
-            <string>daemon</string>
-          </array>
-          <key>RunAtLoad</key>
-          <true/>
-          <key>WorkingDirectory</key>
-          <string>#{var}</string>
-          <key>StandardErrorPath</key>
-          <string>#{var}/log/vproxy.log</string>
-          <key>StandardOutPath</key>
-          <string>#{var}/log/vproxy.log</string>
-        </dict>
-      </plist>
+    service: |
+      name: "vproxy-head"
+      run: ["#{bin}/vproxy", "daemon"]
+      keep_alive: successful_exit: false
+      working_directory: "#{var}"
+      log_path: "#{var}/log/vproxy.log"
+      error_log_path: "#{var}/log/vproxy.log"
 
     caveats: |
       To install your local root CA:
