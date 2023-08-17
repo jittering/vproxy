@@ -60,12 +60,12 @@ brews:
       - name: nss
 
     service: |
-      name: "vproxy"
-      run: ["#{bin}/vproxy", "daemon"]
-      keep_alive: successful_exit: false
-      working_directory: "#{var}"
-      log_path: "#{var}/log/vproxy.log"
-      error_log_path: "#{var}/log/vproxy.log"
+      name "vproxy"
+      run ["#{bin}/vproxy", "daemon"]
+      keep_alive successful_exit: false
+      working_directory "#{var}"
+      log_path "#{var}/log/vproxy.log"
+      error_log_path "#{var}/log/vproxy.log"
 
     caveats: |
       To install your local root CA:
@@ -201,12 +201,12 @@ brews:
       - name: go
 
     service: |
-      name: "vproxy-head"
-      run: ["#{bin}/vproxy", "daemon"]
-      keep_alive: successful_exit: false
-      working_directory: "#{var}"
-      log_path: "#{var}/log/vproxy.log"
-      error_log_path: "#{var}/log/vproxy.log"
+      name "vproxy-head"
+      run ["#{bin}/vproxy", "daemon"]
+      keep_alive successful_exit: false
+      working_directory "#{var}"
+      log_path "#{var}/log/vproxy.log"
+      error_log_path "#{var}/log/vproxy.log"
 
     caveats: |
       To install your local root CA:
