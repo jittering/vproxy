@@ -60,10 +60,9 @@ brews:
       - name: nss
 
     service: |
-      name "vproxy"
       run ["#{bin}/vproxy", "daemon"]
       keep_alive successful_exit: false
-      working_directory "#{var}"
+      working_dir "#{var}"
       log_path "#{var}/log/vproxy.log"
       error_log_path "#{var}/log/vproxy.log"
 
@@ -201,10 +200,9 @@ brews:
       - name: go
 
     service: |
-      name "vproxy-head"
       run ["#{bin}/vproxy", "daemon"]
       keep_alive successful_exit: false
-      working_directory "#{var}"
+      working_dir "#{var}"
       log_path "#{var}/log/vproxy.log"
       error_log_path "#{var}/log/vproxy.log"
 

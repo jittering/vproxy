@@ -8,7 +8,7 @@ snapshot: clean
 	goreleaser release --snapshot --clean
 
 install-formula: snapshot
-	cp -a dist/vproxy.rb dist/vproxy-head.rb /usr/local/Homebrew/Library/Taps/jittering/homebrew-kegs/Formula/
+	cp -a dist/homebrew/Formula/*.rb /usr/local/Homebrew/Library/Taps/jittering/homebrew-kegs/Formula/
 
 build-linux:
 	GOOS=linux go build -o vproxy-linux-x64 ./bin/vproxy/
