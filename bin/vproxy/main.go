@@ -279,8 +279,16 @@ func printInfo(c *cli.Context) error {
 	printVersion(c)
 	fmt.Printf("  CAROOT=%s\n", vproxy.CARootPath())
 	fmt.Printf("  CERT_PATH=%s\n", vproxy.CertPath())
+
+	confFile := findConfigFile(c.String("config"), false)
+	if confFile == "" {
+		fmt.Printf("\n  Config file: [not found]\n")
+	} else {
+		fmt.Printf("\n  Detected Config file: %s (loaded)\n", confFile)
+	}
+
 	certs, _ := filepath.Glob(filepath.Join(vproxy.CertPath(), "*-key.pem"))
-	fmt.Printf("\n  Nubmer of installed certs: %d\n", len(certs))
+	fmt.Printf("\n  Number of installed certs: %d\n", len(certs))
 	fmt.Println("  Certs:")
 	for _, cert := range certs {
 		host := strings.TrimPrefix(strings.TrimSuffix(cert, "-key.pem"), vproxy.CertPath()+string(filepath.Separator))

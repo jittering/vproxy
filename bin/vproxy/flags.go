@@ -227,10 +227,11 @@ vproxy connect hello.local:8888 -- vproxy hello
 				},
 			},
 			{
-				Name:   "info",
-				Usage:  "Print vproxy configuration",
-				Before: loadDaemonConfig,
-				Action: printInfo,
+				Name:        "info",
+				Usage:       "Print vproxy configuration",
+				Description: `More verbose info: vproxy -v info`,
+				Before:      loadDaemonConfig,
+				Action:      printInfo,
 			},
 			{
 				Name:   "hello",

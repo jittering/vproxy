@@ -44,6 +44,8 @@ func fileExists(name string) bool {
 	return true
 }
 
+// findConfig locates a config file at the given locations with either a .conf or .toml extension
+// (file format must be TOML, however)
 func findConfig(files ...string) string {
 	for _, config := range files {
 		if config != "" {
@@ -70,14 +72,6 @@ func homeConfPath() string {
 	return ""
 }
 
-func findClientConfig(path string) string {
-	return findConfig(path, ".vproxy.conf", homeConfPath(), "/usr/local/etc/vproxy.conf", "/etc/vproxy.conf")
-}
-
-func findDaemonConfig(path string) string {
-	return findConfig(path, homeConfPath(), "/usr/local/etc/vproxy.conf", "/etc/vproxy.conf")
-}
-
 func loadConfigFile(path string) (*Config, error) {
 	t, err := toml.LoadFile(path)
 	if err != nil {
@@ -102,48 +96,21 @@ func cleanListenAddr(c *cli.Context) {
 }
 
 func loadClientConfig(c *cli.Context) error {
-	conf := findClientConfig(c.String("config"))
-	if cf := c.String("config"); c.IsSet("config") && conf != cf {
-		log.Fatalf("error: config file not found: %s\n", cf)
-	}
-	if conf == "" {
-		return nil
-	}
-	verbose(c, "Loading config file %s", conf)
-	config, err := loadConfigFile(conf)
-	if err != nil {
-		return err
-	}
-	if config != nil {
-		if v := (config.Client.Verbose || config.Verbose); v && !c.IsSet("verbose") {
-			c.Lineage()[1].Set("verbose", "true")
-			verbose(c, "Loading config file %s", conf)
-			verbose(c, "via conf: verbose=true")
-		}
-		if v := config.Client.Host; v != "" && !c.IsSet("host") {
-			verbose(c, "via conf: host=%s", v)
-			c.Set("host", v)
-		}
-		if v := config.Client.HTTP; v > 0 && !c.IsSet("http") {
-			verbose(c, "via conf: http=%d", v)
-			c.Set("http", strconv.Itoa(v))
-		}
-		if v := config.Client.Bind; v != "" && !c.IsSet("bind") {
-			verbose(c, "via conf: bind=%s", v)
-			c.Set("bind", v)
-		}
-		if v := config.Server.CaRootPath; v != "" {
-			os.Setenv("CAROOT_PATH", v)
-			verbose(c, "via conf: CAROOT_PATH=%s", v)
-		}
-	}
-	return nil
+	conf := findConfigFile(c.String("config"), false)
+	return loadConfig(c, conf)
 }
 
 func loadDaemonConfig(c *cli.Context) error {
-	conf := findClientConfig(c.String("config"))
-	if cf := c.String("config"); c.IsSet("config") && conf != cf {
-		log.Fatalf("error: config file not found: %s\n", cf)
+	conf := findConfigFile(c.String("config"), true)
+	return loadConfig(c, conf)
+}
+
+func loadConfig(c *cli.Context, conf string) error {
+	if c.IsSet("config") {
+		if cf := c.String("config"); conf != cf {
+			// config flag was passed but file does not exist
+			log.Fatalf("error: config file not found: %s\n", cf)
+		}
 	}
 	if conf == "" {
 		return nil
@@ -180,6 +147,29 @@ func loadDaemonConfig(c *cli.Context) error {
 		if v := config.Server.CertPath; v != "" {
 			os.Setenv("CERT_PATH", v)
 			verbose(c, "via conf: CERT_PATH=%s", v)
+		}
+
+		// client configs
+		if v := (config.Client.Verbose || config.Verbose); v && !c.IsSet("verbose") {
+			c.Lineage()[1].Set("verbose", "true")
+			verbose(c, "Loading config file %s", conf)
+			verbose(c, "via conf: verbose=true")
+		}
+		if v := config.Client.Host; v != "" && !c.IsSet("host") {
+			verbose(c, "via conf: host=%s", v)
+			c.Set("host", v)
+		}
+		if v := config.Client.HTTP; v > 0 && !c.IsSet("http") {
+			verbose(c, "via conf: http=%d", v)
+			c.Set("http", strconv.Itoa(v))
+		}
+		if v := config.Client.Bind; v != "" && !c.IsSet("bind") {
+			verbose(c, "via conf: bind=%s", v)
+			c.Set("bind", v)
+		}
+		if v := config.Server.CaRootPath; v != "" {
+			os.Setenv("CAROOT_PATH", v)
+			verbose(c, "via conf: CAROOT_PATH=%s", v)
 		}
 	}
 	cleanListenAddr(c)
