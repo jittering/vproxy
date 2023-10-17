@@ -57,7 +57,7 @@ func CertPath() string {
 
 // MakeCert for the give hostname, if it doesn't already exist.
 func MakeCert(host string) (certFile string, keyFile string, err error) {
-	cp := CertPath()
+	cp := CertPath() + string(filepath.Separator)
 	err = os.MkdirAll(cp, 0755)
 	if err != nil {
 		return "", "", err
