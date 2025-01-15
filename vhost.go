@@ -24,7 +24,7 @@ type Vhost struct {
 	Cert    string // TLS Certificate
 	Key     string // TLS Private Key
 
-	logRing   *deque.Deque
+	logRing   *deque.Deque[string]
 	logChan   LogListener
 	listeners []LogListener
 }
@@ -113,9 +113,13 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 
 	vhost := &Vhost{
 		Host: hostname, ServiceHost: targetHost, Port: targetPort, Handler: proxy,
-		logRing: deque.New(10, 16),
+		logRing: &deque.Deque[string]{},
 		logChan: make(LogListener, 10),
 	}
+
+	// set fixed capacity at 16
+	vhost.logRing.Grow(16)
+	vhost.logRing.SetBaseCap(16)
 
 	go vhost.populateLogBuffer()
 
@@ -152,7 +156,7 @@ func (v *Vhost) BufferAsString() string {
 	}
 	buff := ""
 	for i := 0; i < v.logRing.Len(); i++ {
-		s := v.logRing.At(i).(string)
+		s := v.logRing.At(i)
 		if s != "" {
 			buff += s + "\n"
 		}
