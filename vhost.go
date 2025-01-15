@@ -18,7 +18,7 @@ type Vhost struct {
 	Host string // virtual host name
 
 	ServiceHost string // service host or IP
-	Port        int    // service port
+	ServicePort int    // service port
 
 	Handler http.Handler
 	Cert    string // TLS Certificate
@@ -72,7 +72,7 @@ func (v *VhostMux) DumpServers(w io.Writer) {
 		fmt.Fprintf(w, "%d vhosts:\n", c)
 	}
 	for _, v := range v.Servers {
-		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.Port)
+		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.ServicePort)
 	}
 }
 
@@ -112,7 +112,7 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 	proxy := CreateProxy(targetURL, hostname)
 
 	vhost := &Vhost{
-		Host: hostname, ServiceHost: targetHost, Port: targetPort, Handler: proxy,
+		Host: hostname, ServiceHost: targetHost, ServicePort: targetPort, Handler: proxy,
 		logRing: &deque.Deque[string]{},
 		logChan: make(LogListener, 10),
 	}
