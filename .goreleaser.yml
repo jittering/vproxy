@@ -47,7 +47,7 @@ brews:
       name: Chetan Sarva (via goreleaser)
       email: chetan@pixelcop.net
 
-    folder: Formula
+    directory: Formula
 
     homepage: "https://github.com/jittering/vproxy"
     description: "Zero-config virtual proxies with tls"
