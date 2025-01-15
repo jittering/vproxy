@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/jittering/truststore"
-	"github.com/mitchellh/go-homedir"
 )
 
 var ts *truststore.MkcertLib
@@ -48,7 +47,7 @@ func CertPath() string {
 	}
 
 	// default to user homedir
-	d, err := homedir.Dir()
+	d, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalf("failed to locate homedir: %s", err)
 	}

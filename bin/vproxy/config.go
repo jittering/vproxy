@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/pelletier/go-toml"
 	"github.com/urfave/cli/v2"
 )
@@ -65,7 +64,7 @@ func findConfig(files ...string) string {
 }
 
 func homeConfPath() string {
-	d, err := homedir.Dir()
+	d, err := os.UserHomeDir()
 	if err == nil {
 		return path.Join(d, ".vproxy.conf")
 	}

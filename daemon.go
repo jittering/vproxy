@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/mattn/go-isatty"
-	"github.com/mitchellh/go-homedir"
 )
 
 // Controls whether verbose messages should be printed
@@ -67,7 +66,7 @@ func rerunWithSudo(addr string) {
 	args = append(args, os.Args[1:]...)
 
 	// pass some locations to sudo env
-	home, e := homedir.Dir()
+	home, e := os.UserHomeDir()
 	if e != nil {
 		log.Fatal(e)
 	}
