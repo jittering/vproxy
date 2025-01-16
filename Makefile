@@ -31,8 +31,14 @@ check-style:
 		brew style --display-cop-names --except-cops="$${cops}" ./dist/*.rb;
 
 build-brew:
-	 go build -o vproxy ./bin/vproxy/
-	 sudo mv vproxy /usr/local/opt/vproxy/bin/vproxy
+	 go build -ldflags \
+	 	"-X main.version=snapshot \
+			-X main.commit=$$(git rev-parse HEAD) \
+			-X main.date=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+			-X main.builtBy=$$(whoami)" \
+		-o vproxy ./bin/vproxy/
+
+	 sudo mv vproxy /opt/homebrew/opt/vproxy/bin/vproxy
 	 sudo pkill -f 'vproxy daemon'
 
 clean:

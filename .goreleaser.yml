@@ -1,3 +1,5 @@
+version: 2
+
 project_name: vproxy
 before:
   hooks:
@@ -19,7 +21,7 @@ archives:
 checksum:
   name_template: "checksums.txt"
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
@@ -186,7 +188,7 @@ brews:
       name: Chetan Sarva (via goreleaser)
       email: chetan@pixelcop.net
 
-    folder: Formula
+    directory: Formula
 
     homepage: "https://github.com/jittering/vproxy"
     description: "Zero-config virtual proxies with tls"
