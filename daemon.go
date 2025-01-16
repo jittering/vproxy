@@ -2,11 +2,13 @@ package vproxy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,7 +45,9 @@ type Daemon struct {
 
 // NewDaemon
 func NewDaemon(lh *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
-	return &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
+	d := &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
+	d.loadVhosts()
+	return d
 }
 
 func rerunWithSudo(addr string) {
@@ -275,6 +279,52 @@ func (d *Daemon) doRemoveVhost(vhost *Vhost, w http.ResponseWriter) {
 	fmt.Fprintf(w, "removing vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
 	vhost.Close()
 	d.loggedHandler.RemoveVhost(vhost.Host)
+	d.saveVhosts()
+}
+
+// load saved vhosts from disk
+func (d *Daemon) loadVhosts() {
+	c := path.Join(CertPath(), "vhosts.json")
+	j, err := os.ReadFile(c)
+	if err != nil {
+		fmt.Println("[*] warning: failed to load vhosts from disk: ", err)
+		return
+	}
+	servers := map[string]*Vhost{}
+	err = json.Unmarshal(j, &servers)
+	if err != nil {
+		fmt.Println("[*] warning: failed to load vhosts from disk: ", err)
+		return
+	}
+	if len(servers) == 0 {
+		return
+	}
+	for _, vhost := range servers {
+		vhost.Init()
+		d.loggedHandler.AddVhost(vhost)
+		err = addToHosts(vhost.Host)
+		if err != nil {
+			msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file: %s\n", vhost.Host, err)
+			fmt.Println(msg)
+		}
+		// fmt.Printf("[*] loaded vhost: %s\n", vhost.String())
+	}
+	fmt.Printf("[*] loaded %d vhost(s)\n", len(servers))
+}
+
+// save vhosts to disk
+func (d *Daemon) saveVhosts() {
+	c := path.Join(CertPath(), "vhosts.json")
+	j, err := json.Marshal(d.loggedHandler.vhostMux.Servers)
+	if err != nil {
+		fmt.Println("[*] warning: failed to save vhosts to disk: ", err)
+		return
+	}
+	err = os.WriteFile(c, j, 0644)
+	if err != nil {
+		fmt.Println("[*] warning: failed to save vhosts to disk: ", err)
+		return
+	}
 }
 
 // addVhost for the given binding to the LoggedHandler
@@ -303,6 +353,8 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	d.loggedHandler.AddVhost(vhost)
+	d.saveVhosts()
+
 	if d.enableTLS() {
 		d.restartTLS()
 	}
