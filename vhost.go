@@ -167,8 +167,12 @@ func (v *Vhost) BufferAsString() string {
 }
 
 func (v *Vhost) Close() {
-	close(v.logChan)
-	v.logRing.Clear()
+	if v.logChan != nil {
+		close(v.logChan)
+	}
+	if v.logRing != nil {
+		v.logRing.Clear()
+	}
 }
 
 func (v *Vhost) populateLogBuffer() {

@@ -108,6 +108,15 @@ func testListener(addr string) {
 	l.Close()
 }
 
+func (d *Daemon) Shutdown() {
+	if d.enableHTTP() && d.httpListener != nil {
+		d.httpListener.Close()
+	}
+	if d.enableTLS() && d.httpsListener != nil {
+		d.httpsListener.Close()
+	}
+}
+
 // Run the daemon service. Does not return until the service is killed.
 func (d *Daemon) Run() {
 	d.httpAddr = fmt.Sprintf("%s:%d", d.listenHost, d.httpPort)

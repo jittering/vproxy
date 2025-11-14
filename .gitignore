@@ -31,3 +31,4 @@ dist/
 .vproxy.conf
 t/
 *.pprof
+.history

@@ -87,7 +87,7 @@ func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
 	}
 
 	// build cn and return
-	cfg.BuildNameToCertificate()
+	// cfg.BuildNameToCertificate()
 	return cfg
 }
 
