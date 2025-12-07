@@ -286,7 +286,6 @@ func (d *Daemon) removeVhost(w http.ResponseWriter, r *http.Request) {
 func (d *Daemon) doRemoveVhost(vhost *Vhost, w http.ResponseWriter) {
 	fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
 	fmt.Fprintf(w, "removing vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
-	vhost.Close()
 	d.loggedHandler.RemoveVhost(vhost.Host)
 	d.saveVhosts()
 }
@@ -349,7 +348,6 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 	// remove any existing vhost
 	if v := d.loggedHandler.GetVhost(vhost.Host); v != nil {
 		fmt.Printf("[*] removing existing vhost: %s -> %d\n", v.Host, v.ServicePort)
-		v.Close()
 		d.loggedHandler.RemoveVhost(vhost.Host)
 	}
 

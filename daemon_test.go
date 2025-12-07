@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -22,11 +23,28 @@ func setup() error {
 	fmt.Println("using temp dir:", temp)
 	os.Setenv("CERT_PATH", temp)
 	os.Setenv("CAROOT_PATH", temp)
+	os.Setenv("CAROOT", temp)
 	err = InitTrustStore()
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func reset() {
+	os.Remove(path.Join(temp, "vhosts.json"))
+}
+
+func listTempDir() {
+	files, err := os.ReadDir(temp)
+	if err != nil {
+		fmt.Println("error reading temp dir:", err)
+		return
+	}
+	fmt.Println("temp dir contents:")
+	for _, f := range files {
+		fmt.Println(" -", f.Name())
+	}
 }
 
 func teardown() {
@@ -48,6 +66,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestListClients(t *testing.T) {
+	reset()
 	request, _ := http.NewRequest("GET", "/events/next/", nil)
 	response := httptest.NewRecorder()
 
@@ -79,14 +98,18 @@ func TestListClients(t *testing.T) {
 }
 
 func TestAddRemoveVhost(t *testing.T) {
-
+	reset()
 	vhostMux := CreateVhostMux([]string{}, true)
 	lh := NewLoggedHandler(vhostMux)
+	assert.Equal(t, 0, len(lh.vhostMux.Servers))
+
 	d := NewDaemon(lh, "", 0, 0)
 
 	r := httptest.NewRecorder()
 	d.addVhost("foo:8000", r)
 	assert.Equal(t, 1, len(lh.vhostMux.Servers))
+	assert.NotNil(t, lh.vhostMux.Servers["foo"], "has vhost for foo")
+	assert.NotNil(t, lh.vhostMux.Servers["foo"].Handler, "has handler for foo")
 
 	v := d.loggedHandler.GetVhost("foo")
 	d.doRemoveVhost(v, r)

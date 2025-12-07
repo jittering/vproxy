@@ -58,7 +58,11 @@ func (lh *LoggedHandler) GetVhost(host string) *Vhost {
 }
 
 func (lh *LoggedHandler) RemoveVhost(host string) {
-	delete(lh.vhostMux.Servers, host)
+	vhost := lh.vhostMux.Servers[host]
+	if vhost != nil {
+		vhost.Close()
+		delete(lh.vhostMux.Servers, host)
+	}
 }
 
 // DumpServers to the given writer
@@ -114,11 +118,7 @@ func (lh *LoggedHandler) pushLog(host string, msg string) {
 	fmt.Println(msg)
 
 	if vhost := lh.GetVhost(host); vhost != nil {
-		vhost.logChan <- msg // push to buffer
-		for _, logChan := range vhost.listeners {
-			// push to client listeners
-			logChan <- msg
-		}
+		vhost.PushLog(msg)
 	}
 }
 

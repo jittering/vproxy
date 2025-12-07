@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,7 @@ type Vhost struct {
 	logRing   *deque.Deque[string] `json:"-"`
 	logChan   LogListener          `json:"-"`
 	listeners []LogListener        `json:"-"`
+	closed    bool                 `json:"-"`
 }
 
 type LogListener chan string
@@ -52,6 +54,7 @@ func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if val := recover(); val != nil {
 			log.Printf("Error proxying request `%s` to `%s`: %v", originalURL, r.URL, val)
+			log.Printf("%s", debug.Stack())
 			w.WriteHeader(http.StatusServiceUnavailable)
 			fmt.Fprintf(w, "Error proxying request `%s` to `%s`: %v", originalURL, r.URL, val)
 		}
@@ -121,6 +124,8 @@ func CreateVhost(input string, useTLS bool) (*Vhost, error) {
 		}
 	}
 
+	vhost.Init()
+
 	return vhost, nil
 }
 
@@ -167,11 +172,26 @@ func (v *Vhost) BufferAsString() string {
 }
 
 func (v *Vhost) Close() {
+	if v.closed {
+		return
+	}
+	v.closed = true
 	if v.logChan != nil {
 		close(v.logChan)
 	}
 	if v.logRing != nil {
 		v.logRing.Clear()
+	}
+}
+
+func (v *Vhost) PushLog(msg string) {
+	if v.closed {
+		return
+	}
+	v.logChan <- msg // push to buffer
+	for _, logChan := range v.listeners {
+		// push to client listeners
+		logChan <- msg
 	}
 }
 
