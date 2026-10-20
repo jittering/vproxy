@@ -114,6 +114,11 @@ brews:
             # Path where generated certificates should be stored
             cert_path = "#{var}/vproxy/cert"
 
+            # Optional MCP authentication (disabled when token is empty)
+            #[mcp]
+            # Send Authorization: Bearer <token> on MCP requests when enabled
+            #token = ""
+
             [client]
             # Enable verbose output (for client only)
             #verbose = false
@@ -261,6 +266,11 @@ brews:
 
             # Path where generated certificates should be stored
             cert_path = "#{var}/vproxy/cert"
+
+            # Optional MCP authentication (disabled when token is empty)
+            #[mcp]
+            # Send Authorization: Bearer <token> on MCP requests when enabled
+            #token = ""
 
             [client]
             # Enable verbose output (for client only)
