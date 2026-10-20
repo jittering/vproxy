@@ -50,14 +50,18 @@ func (lh *LoggedHandler) createDefaultCert() {
 }
 
 func (lh *LoggedHandler) AddVhost(vhost *Vhost) {
+	lh.vhostMux.mu.Lock()
+	defer lh.vhostMux.mu.Unlock()
 	lh.vhostMux.Servers[vhost.Host] = vhost
 }
 
 func (lh *LoggedHandler) GetVhost(host string) *Vhost {
-	return lh.vhostMux.Servers[host]
+	return lh.vhostMux.get(host)
 }
 
 func (lh *LoggedHandler) RemoveVhost(host string) {
+	lh.vhostMux.mu.Lock()
+	defer lh.vhostMux.mu.Unlock()
 	vhost := lh.vhostMux.Servers[host]
 	if vhost != nil {
 		vhost.Close()
@@ -82,7 +86,7 @@ func (lh *LoggedHandler) CreateTLSConfig() *tls.Config {
 	cfg.Certificates = append(cfg.Certificates, cert)
 
 	// add cert for each vhost
-	for _, server := range lh.vhostMux.Servers {
+	for _, server := range lh.vhostMux.snapshot() {
 		cert, err := tls.LoadX509KeyPair(server.Cert, server.Key)
 		if err != nil {
 			log.Fatalf("failed to load keypair (%s, %s): %s", server.Cert, server.Key, err)
@@ -135,6 +139,9 @@ type LogRecord struct {
 	status        int
 	responseBytes int64
 }
+
+// Unwrap preserves ResponseController support for streaming HTTP handlers.
+func (r *LogRecord) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
 // Write wrapper that counts bytes
 func (r *LogRecord) Write(p []byte) (int, error) {

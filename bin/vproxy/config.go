@@ -15,6 +15,10 @@ import (
 type Config struct {
 	Verbose bool
 
+	MCP struct {
+		Token string
+	}
+
 	Server struct {
 		Verbose bool
 
@@ -122,6 +126,11 @@ func loadConfig(c *cli.Context, conf string) error {
 	}
 
 	if config != nil {
+		// Keep secrets out of flags, environment variables, and verbose logs.
+		if c.App.Metadata == nil {
+			c.App.Metadata = make(map[string]interface{})
+		}
+		c.App.Metadata["mcp-token"] = config.MCP.Token
 		if v := (config.Server.Verbose || config.Verbose); v && !c.IsSet("verbose") {
 			c.Lineage()[1].Set("verbose", "true")
 			verbose(c, "Loading config file %s", conf)

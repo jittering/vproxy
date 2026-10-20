@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gammazero/deque"
 	"github.com/txn2/txeh"
@@ -36,14 +37,32 @@ type LogListener chan string
 // VhostMux is an http.Handler whose ServeHTTP forwards the request to
 // backend Servers according to the incoming request URL
 type VhostMux struct {
+	mu      sync.RWMutex
 	Servers map[string]*Vhost
+}
+
+func (v *VhostMux) get(host string) *Vhost {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return v.Servers[host]
+}
+
+// snapshot allows management and proxy requests to safely run concurrently.
+func (v *VhostMux) snapshot() map[string]*Vhost {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	servers := make(map[string]*Vhost, len(v.Servers))
+	for host, server := range v.Servers {
+		servers[host] = server
+	}
+	return servers
 }
 
 func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	originalURL := r.Host + r.URL.Path
 
 	host := getHostName(r.Host)
-	vhost := v.Servers[host]
+	vhost := v.get(host)
 	if vhost == nil {
 		log.Printf("Host Not Found: `%s`", host)
 		w.WriteHeader(404)
@@ -66,7 +85,8 @@ func (v *VhostMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // DumpServers to the given writer
 func (v *VhostMux) DumpServers(w io.Writer) {
-	switch c := len(v.Servers); c {
+	servers := v.snapshot()
+	switch c := len(servers); c {
 	case 0:
 		fmt.Fprintln(w, "0 vhosts")
 	case 1:
@@ -74,7 +94,7 @@ func (v *VhostMux) DumpServers(w io.Writer) {
 	default:
 		fmt.Fprintf(w, "%d vhosts:\n", c)
 	}
-	for _, v := range v.Servers {
+	for _, v := range servers {
 		fmt.Fprintf(w, "%s -> %s:%d\n", v.Host, v.ServiceHost, v.ServicePort)
 	}
 }

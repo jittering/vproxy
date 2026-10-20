@@ -152,6 +152,7 @@ func startDaemon(c *cli.Context) error {
 
 	// start daemon
 	d := vproxy.NewDaemon(loggedHandler, listen, httpPort, httpsPort)
+	d.MCPToken, _ = c.App.Metadata["mcp-token"].(string)
 	d.Run()
 
 	return nil

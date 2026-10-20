@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -28,7 +29,12 @@ const PONG = "hello from vproxy"
 // proxy chain:
 // daemon -> mux (LoggedHandler) -> /* -> VhostMux -> Vhost -> ReverseProxy -> upstream service
 type Daemon struct {
-	wg sync.WaitGroup
+	wg           sync.WaitGroup
+	managementMu sync.Mutex
+	updateHosts  func(string) error
+
+	// MCPToken enables Bearer authentication on the MCP endpoint when non-empty.
+	MCPToken string
 
 	loggedHandler *LoggedHandler
 
@@ -45,7 +51,7 @@ type Daemon struct {
 
 // NewDaemon
 func NewDaemon(lh *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
-	d := &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort}
+	d := &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort, updateHosts: addToHosts}
 	d.loadVhosts()
 	return d
 }
@@ -135,6 +141,7 @@ func (d *Daemon) Run() {
 	d.loggedHandler.HandleFunc("/_vproxy/clients/add", d.registerVhost)
 	d.loggedHandler.HandleFunc("/_vproxy/clients/stream", d.streamLogs)
 	d.loggedHandler.HandleFunc("/_vproxy/clients/remove", d.removeVhost)
+	d.loggedHandler.Handle("/_vproxy/mcp", d.MCPHandler(d.MCPToken))
 	d.wg.Add(1) // ensure we don't exit immediately
 
 	if d.enableHTTP() {
@@ -260,11 +267,13 @@ func (d *Daemon) relayLogsUntilClose(vhost *Vhost, w http.ResponseWriter, reqCtx
 }
 
 func (d *Daemon) removeVhost(w http.ResponseWriter, r *http.Request) {
+	d.managementMu.Lock()
+	defer d.managementMu.Unlock()
 	hostname := r.PostFormValue("host")
 	all, _ := strconv.ParseBool(r.PostFormValue("all"))
 
 	if all {
-		for _, vhost := range d.loggedHandler.vhostMux.Servers {
+		for _, vhost := range d.loggedHandler.vhostMux.snapshot() {
 			d.doRemoveVhost(vhost, w)
 		}
 
@@ -283,7 +292,7 @@ func (d *Daemon) removeVhost(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (d *Daemon) doRemoveVhost(vhost *Vhost, w http.ResponseWriter) {
+func (d *Daemon) doRemoveVhost(vhost *Vhost, w io.Writer) {
 	fmt.Printf("[*] removing vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
 	fmt.Fprintf(w, "removing vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
 	d.loggedHandler.RemoveVhost(vhost.Host)
@@ -310,7 +319,7 @@ func (d *Daemon) loadVhosts() {
 	for _, vhost := range servers {
 		vhost.Init()
 		d.loggedHandler.AddVhost(vhost)
-		err = addToHosts(vhost.Host)
+		err = d.updateHosts(vhost.Host)
 		if err != nil {
 			msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file: %s\n", vhost.Host, err)
 			fmt.Println(msg)
@@ -323,7 +332,7 @@ func (d *Daemon) loadVhosts() {
 // save vhosts to disk
 func (d *Daemon) saveVhosts() {
 	c := path.Join(CertPath(), "vhosts.json")
-	j, err := json.Marshal(d.loggedHandler.vhostMux.Servers)
+	j, err := json.Marshal(d.loggedHandler.vhostMux.snapshot())
 	if err != nil {
 		fmt.Println("[*] warning: failed to save vhosts to disk: ", err)
 		return
@@ -337,12 +346,27 @@ func (d *Daemon) saveVhosts() {
 
 // addVhost for the given binding to the LoggedHandler
 func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
+	vhost, message, err := d.addBinding(binding)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return nil
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	fmt.Fprint(w, message)
+	return vhost
+}
+
+func (d *Daemon) addBinding(binding string) (*Vhost, string, error) {
+	d.managementMu.Lock()
+	defer d.managementMu.Unlock()
 	vhost, err := CreateVhost(binding, d.enableTLS())
 	if err != nil {
 		fmt.Printf("[*] warning: failed to register new vhost `%s`\n", binding)
 		fmt.Printf("    %s\n", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return nil
+		return nil, "", err
 	}
 
 	// remove any existing vhost
@@ -353,12 +377,6 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 
 	fmt.Printf("[*] registering new vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
 
-	// Set the headers related to event streaming.
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	d.loggedHandler.AddVhost(vhost)
 	d.saveVhosts()
 
@@ -366,16 +384,16 @@ func (d *Daemon) addVhost(binding string, w http.ResponseWriter) *Vhost {
 		d.restartTLS()
 	}
 
-	err = addToHosts(vhost.Host)
+	message := ""
+	err = d.updateHosts(vhost.Host)
 	if err != nil {
 		msg := fmt.Sprintf("[*] warning: failed to add %s to system hosts file: %s\n", vhost.Host, err)
 		fmt.Println(msg)
-		fmt.Fprintln(w, msg)
+		message = msg + "\n"
 	}
 
-	fmt.Fprintf(w, "[*] added vhost: %s", binding)
-
-	return vhost
+	message += fmt.Sprintf("[*] added vhost: %s", binding)
+	return vhost, message, nil
 }
 
 func (d *Daemon) hello(w http.ResponseWriter, r *http.Request) {
