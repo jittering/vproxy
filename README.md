@@ -34,7 +34,7 @@ or manually (macOS, linux, windows):
 - Download a [pre-built binary](https://github.com/jittering/vproxy/releases)
 - Install in proper location, e.g., `/usr/local/bin/` or `%SYSTEMROOT%\System32\`
 
- or build it from source:
+ or build it from source (Go 1.25 or newer):
 
 ```sh
 go install github.com/jittering/vproxy/bin/vproxy@master
@@ -83,6 +83,46 @@ Password:
 [*] starting proxy: http://127.0.0.1:80
 [*] starting proxy: https://127.0.0.1:443
 ```
+
+### MCP server
+
+The daemon exposes an MCP server at `http://127.0.0.1/_vproxy/mcp` (or
+`https://vproxy.local/_vproxy/mcp` when HTTPS is enabled). It uses Streamable HTTP
+with stateless JSON responses on the daemon's existing ports.
+
+Tools:
+
+| Tool | Arguments | Action |
+| --- | --- | --- |
+| `list` | `{}` | List proxies with hostname, upstream host, and port. |
+| `add` | `{"binding":"app.local:3000"}` | Add or replace a proxy to a local port. |
+| `remove` | `{"host":"app.local"}` | Remove a proxy by its exact hostname. |
+
+Changes are saved to `vhosts.json`, just like CLI changes. Adding a proxy also
+updates the hosts file and generates a certificate when TLS is enabled.
+Hosts-file update warnings are included in the tool response. Removing a proxy
+retains its hosts-file entry and certificates, matching the CLI.
+
+Authentication is disabled by default. Set a token in your TOML config to require
+the `Authorization: Bearer <token>` header on every MCP request:
+
+```toml
+[mcp]
+token = "replace-with-your-secret-token"
+```
+
+Start or restart the daemon with that config:
+
+```sh
+vproxy --config /path/to/vproxy.toml daemon
+```
+
+Configure your MCP client's Streamable HTTP URL as
+`http://127.0.0.1/_vproxy/mcp` and its `Authorization` header as
+`Bearer replace-with-your-secret-token`. Use your configured port if different
+from 80. Omit the token setting (or use an empty string) to disable authentication.
+This token protects the MCP endpoint only; the existing CLI management endpoints
+retain their current behavior.
 
 ### client
 
