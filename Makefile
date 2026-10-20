@@ -1,6 +1,10 @@
 
 SHELL := bash
 
+MAC_ARCH := $(shell go env GOHOSTARCH)
+
+.PHONY: build-mac
+
 # Build the vproxy binary (using go build)
 build: clean
 	go build ./bin/vproxy
@@ -19,9 +23,9 @@ install-formula: snapshot
 build-linux:
 	GOOS=linux go build -o vproxy-linux-x64 ./bin/vproxy/
 
-# Build for mac (x64) (for testing only, release uses goreleaser)
+# Build for the local Mac architecture (for testing only, release uses goreleaser)
 build-mac:
-	 GOOS=darwin go build -o vproxy-macos-x64 ./bin/vproxy/
+	GOOS=darwin GOARCH=$(MAC_ARCH) go build -o vproxy-macos-$(MAC_ARCH) ./bin/vproxy/
 
 # Build for windows (x64) (for testing only, release uses goreleaser)
 build-windows:
