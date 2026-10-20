@@ -14,17 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           # so we get proper snapshot version info
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cache/go-build
@@ -34,7 +34,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: latest
           args: release --clean --snapshot
