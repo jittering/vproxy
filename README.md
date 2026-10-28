@@ -101,7 +101,9 @@ Tools:
 Changes are saved to `vhosts.json`, just like CLI changes. Adding a proxy also
 updates the hosts file and generates a certificate when TLS is enabled.
 Hosts-file update warnings are included in the tool response. Removing a proxy
-retains its hosts-file entry and certificates, matching the CLI.
+also removes its hostname from the hosts file, but retains certificates. This
+applies to MCP, CLI, and CLI remove-all. If cleanup fails, the proxy is still
+removed and a warning is returned.
 
 Authentication is disabled by default. Set a token in your TOML config to require
 the `Authorization: Bearer <token>` header on every MCP request:

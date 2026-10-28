@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -61,7 +60,7 @@ func (d *Daemon) MCPHandler(token string) http.Handler {
 		return nil, changeOutput{Message: message}, err
 	})
 	mcp.AddTool(s, &mcp.Tool{
-		Name: "remove", Description: "Remove a registered reverse proxy by hostname and persist the change. Existing hosts-file entries and certificates are retained.",
+		Name: "remove", Description: "Remove a registered reverse proxy by hostname, persist the change, and remove its hosts-file entry. Certificates are retained. Reports a warning if hosts-file cleanup fails.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input removeInput) (*mcp.CallToolResult, changeOutput, error) {
 		d.managementMu.Lock()
 		defer d.managementMu.Unlock()
@@ -69,8 +68,9 @@ func (d *Daemon) MCPHandler(token string) http.Handler {
 		if v == nil {
 			return nil, changeOutput{}, fmt.Errorf("host %q not found", input.Host)
 		}
-		d.doRemoveVhost(v, io.Discard)
-		return nil, changeOutput{Message: "Removed " + input.Host}, nil
+		var message strings.Builder
+		d.doRemoveVhost(v, &message)
+		return nil, changeOutput{Message: strings.TrimSpace(message.String())}, nil
 	})
 	handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server { return s }, &mcp.StreamableHTTPOptions{
 		Stateless: true, JSONResponse: true,

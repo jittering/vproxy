@@ -240,3 +240,17 @@ func addToHosts(host string) error {
 	hosts.AddHost("127.0.0.1", host)
 	return hosts.Save()
 }
+
+// Remove the given hostname without removing other aliases on the same line.
+func removeFromHosts(host string) error {
+	return removeFromHostsFile(host, "")
+}
+
+func removeFromHostsFile(host, filename string) error {
+	hosts, err := txeh.NewHosts(&txeh.HostsConfig{ReadFilePath: filename})
+	if err != nil {
+		return err
+	}
+	hosts.RemoveHost(host)
+	return hosts.Save()
+}

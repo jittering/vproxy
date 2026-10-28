@@ -21,6 +21,7 @@ func newMCPTestDaemon(t *testing.T) *Daemon {
 	lh := &LoggedHandler{ServeMux: http.NewServeMux(), vhostMux: CreateVhostMux(nil, false)}
 	d := NewDaemon(lh, "127.0.0.1", 0, 0)
 	d.updateHosts = func(string) error { return fmt.Errorf("test hosts file is read-only") }
+	d.pruneHosts = func(string) error { return fmt.Errorf("test hosts file is read-only") }
 	t.Cleanup(func() {
 		for _, v := range lh.vhostMux.snapshot() {
 			lh.RemoveVhost(v.Host)
@@ -78,13 +79,30 @@ func TestMCPTools(t *testing.T) {
 	}
 	call("add", map[string]any{}, true)
 	call("remove", map[string]any{"host": "missing.local"}, true)
-	call("remove", map[string]any{"host": "app.local"}, false)
+	message = call("remove", map[string]any{"host": "app.local"}, false)
+	if !strings.Contains(message, "failed to remove app.local from system hosts file") || !strings.Contains(message, "read-only") {
+		t.Fatal("hosts-file cleanup warning missing from result")
+	}
 	if len(d.loggedHandler.vhostMux.snapshot()) != 0 {
 		t.Fatal("remove left a proxy registered")
 	}
 	data, err := os.ReadFile(filepath.Join(CertPath(), "vhosts.json"))
 	if err != nil || string(data) != "{}" {
 		t.Fatalf("removal not persisted: %s, %v", data, err)
+	}
+	// Successful MCP removal prunes only the requested hostname.
+	hostsFile := filepath.Join(t.TempDir(), "hosts")
+	if err := os.WriteFile(hostsFile, []byte("127.0.0.1 localhost app.local other.local\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	d.pruneHosts = func(host string) error { return removeFromHostsFile(host, hostsFile) }
+	call("add", map[string]any{"binding": "app.local:3000"}, false)
+	if message := call("remove", map[string]any{"host": "app.local"}, false); strings.Contains(message, "warning") {
+		t.Fatalf("unexpected cleanup warning: %s", message)
+	}
+	data, err = os.ReadFile(hostsFile)
+	if err != nil || strings.Contains(string(data), "app.local") || !strings.Contains(string(data), "localhost") || !strings.Contains(string(data), "other.local") {
+		t.Fatalf("unexpected hosts file after MCP removal: %s, %v", data, err)
 	}
 }
 

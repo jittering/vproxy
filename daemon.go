@@ -32,6 +32,7 @@ type Daemon struct {
 	wg           sync.WaitGroup
 	managementMu sync.Mutex
 	updateHosts  func(string) error
+	pruneHosts   func(string) error
 
 	// MCPToken enables Bearer authentication on the MCP endpoint when non-empty.
 	MCPToken string
@@ -51,7 +52,7 @@ type Daemon struct {
 
 // NewDaemon
 func NewDaemon(lh *LoggedHandler, listen string, httpPort int, httpsPort int) *Daemon {
-	d := &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort, updateHosts: addToHosts}
+	d := &Daemon{loggedHandler: lh, listenHost: listen, httpPort: httpPort, httpsPort: httpsPort, updateHosts: addToHosts, pruneHosts: removeFromHosts}
 	d.loadVhosts()
 	return d
 }
@@ -297,6 +298,11 @@ func (d *Daemon) doRemoveVhost(vhost *Vhost, w io.Writer) {
 	fmt.Fprintf(w, "removing vhost: %s -> %d\n", vhost.Host, vhost.ServicePort)
 	d.loggedHandler.RemoveVhost(vhost.Host)
 	d.saveVhosts()
+	if err := d.pruneHosts(vhost.Host); err != nil {
+		msg := fmt.Sprintf("[*] warning: failed to remove %s from system hosts file: %s\n", vhost.Host, err)
+		fmt.Print(msg)
+		fmt.Fprint(w, msg)
+	}
 }
 
 // load saved vhosts from disk

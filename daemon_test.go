@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -75,6 +76,7 @@ func TestListClients(t *testing.T) {
 
 	// start daemon
 	d := NewDaemon(lh, "127.0.0.1", 0, 0)
+	d.updateHosts = func(string) error { return nil }
 
 	d.listClients(response, request)
 	if response.Code != http.StatusOK {
@@ -104,6 +106,9 @@ func TestAddRemoveVhost(t *testing.T) {
 	assert.Equal(t, 0, len(lh.vhostMux.Servers))
 
 	d := NewDaemon(lh, "", 0, 0)
+	d.updateHosts = func(string) error { return nil }
+	var removedHost string
+	d.pruneHosts = func(host string) error { removedHost = host; return nil }
 
 	r := httptest.NewRecorder()
 	d.addVhost("foo:8000", r)
@@ -114,4 +119,38 @@ func TestAddRemoveVhost(t *testing.T) {
 	v := d.loggedHandler.GetVhost("foo")
 	d.doRemoveVhost(v, r)
 	assert.Equal(t, 0, len(lh.vhostMux.Servers))
+	assert.Equal(t, "foo", removedHost)
+}
+
+func TestRemoveVhostHostsCleanup(t *testing.T) {
+	for _, all := range []bool{false, true} {
+		t.Run(fmt.Sprintf("all=%t", all), func(t *testing.T) {
+			d := newMCPTestDaemon(t)
+			d.updateHosts = func(string) error { return nil }
+			removed := map[string]bool{}
+			d.pruneHosts = func(host string) error {
+				removed[host] = true
+				return fmt.Errorf("read-only hosts file")
+			}
+			for _, host := range []string{"one.local", "two.local"} {
+				if _, _, err := d.addBinding(host + ":3000"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			form := url.Values{"host": {"one.local"}, "all": {fmt.Sprint(all)}}
+			req := httptest.NewRequest("POST", "/_vproxy/clients/remove", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			response := httptest.NewRecorder()
+			d.removeVhost(response, req)
+			assert.True(t, removed["one.local"])
+			assert.Equal(t, all, removed["two.local"])
+			assert.Contains(t, response.Body.String(), "failed to remove one.local from system hosts file")
+			assert.Nil(t, d.loggedHandler.GetVhost("one.local"))
+			if all {
+				assert.Empty(t, d.loggedHandler.vhostMux.snapshot())
+			} else {
+				assert.NotNil(t, d.loggedHandler.GetVhost("two.local"))
+			}
+		})
+	}
 }
